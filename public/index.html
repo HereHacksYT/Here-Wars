@@ -2,53 +2,81 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Here Wars - 3D Bot Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Here Wars - 3D</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; background: #000; }
+        body { margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; background: #222; user-select: none; }
         
-        /* Oyun İçi Arayüz (UI) */
+        /* GİRİŞ MENÜSÜ */
+        #menu-ekrani {
+            position: absolute; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 100; color: white;
+        }
+        #menu-ekrani h1 { font-size: 42px; margin-bottom: 30px; text-shadow: 2px 4px 10px rgba(0,0,0,0.5); font-style: italic; }
+        
+        .secenek-grubu { display: flex; gap: 20px; margin-bottom: 40px; }
+        .secenek-btn {
+            padding: 15px 25px; background: #333; border: 3px solid #fff; border-radius: 12px;
+            color: white; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.2s;
+        }
+        .secenek-btn.secili { background: #00bcd4; border-color: #fff; transform: scale(1.05); }
+
+        /* İstediğin Sarı Başlama Butonu */
+        #basla-btn {
+            padding: 20px 60px; background: #ffcc00; border: none; border-radius: 15px;
+            font-size: 24px; font-weight: bold; color: #333; cursor: pointer;
+            box-shadow: 0 6px 0 #cc9900, 0 10px 20px rgba(0,0,0,0.4); transition: 0.1s;
+        }
+        #basla-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #cc9900, 0 4px 10px rgba(0,0,0,0.4); }
+
+        /* OYUN İÇİ ARAYÜZ (UI) */
+        #oyun-ui { display: none; } /* Başta gizli, oyuna girince açılacak */
         #ui {
             position: absolute; bottom: 20px; left: 50%;
-            transform: translateX(-50%); display: flex; gap: 15px; z-index: 10;
+            transform: translateX(-50%); display: flex; gap: 12px; z-index: 10;
         }
         .card {
-            width: 90px; height: 110px; background: #f0f0f0;
+            width: 85px; height: 105px; background: #f0f0f0;
             border: 3px solid #222; border-radius: 12px;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-weight: bold; cursor: pointer; user-select: none; box-shadow: 0 4px 8px rgba(0,0,0,0.5);
-            transition: transform 0.1s;
+            font-weight: bold; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.5);
         }
-        .card:hover { transform: scale(1.05); }
-        .card.active { border-color: #ffcc00; background: #fffde6; }
+        .card.active { border-color: #ffcc00; background: #fffde6; transform: scale(1.05); }
         
         #iksir-bar {
-            position: absolute; bottom: 145px; left: 50%;
-            transform: translateX(-50%); width: 310px; height: 22px;
+            position: absolute; bottom: 140px; left: 50%;
+            transform: translateX(-50%); width: 290px; height: 22px;
             background: #333; border: 2px solid #fff; border-radius: 11px; overflow: hidden; z-index: 10;
         }
-        #iksir-doluluk {
-            width: 0%; height: 100%; background: #e000e0;
-            transition: width 0.1s linear;
-        }
-        #iksir-metin {
-            position: absolute; width: 100%; text-align: center; color: white;
-            font-weight: bold; font-size: 14px; line-height: 22px; z-index: 11;
-        }
+        #iksir-doluluk { width: 0%; height: 100%; background: #e000e0; transition: width 0.1s linear; }
+        #iksir-metin { position: absolute; width: 100%; text-align: center; color: white; font-weight: bold; font-size: 14px; line-height: 22px; z-index: 11; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <div id="iksir-bar">
-        <div id="iksir-metin">0 / 10</div>
-        <div id="iksir-doluluk"></div>
+    <div id="menu-ekrani">
+        <h1>HERE WARS</h1>
+        <div class="secenek-grubu">
+            <div class="secenek-btn secili" id="mode-bot" onclick="modSec('bot')">🤖 Bota Karşı</div>
+            <div class="secenek-btn" id="mode-friend" onclick="modSec('friend')">👥 Arkadaşla (Yakında)</div>
+        </div>
+        <button id="basla-btn" onclick="oyunuBaslat()">BAŞLA</button>
     </div>
-    
-    <div id="ui">
-        <div class="card" id="card-Sovalye" onclick="kartSec('Sovalye', 3)"><span>Şövalye</span><span>💧3</span></div>
-        <div class="card" id="card-Okcu" onclick="kartSec('Okcu', 2)"><span>Okçu</span><span>💧2</span></div>
-        <div class="card" id="card-Dev" onclick="kartSec('Dev', 5)"><span>Dev</span><span>💧5</span></div>
+
+    <div id="oyun-ui">
+        <div id="iksir-bar">
+            <div id="iksir-metin">0 / 10</div>
+            <div id="iksir-doluluk"></div>
+        </div>
+        
+        <div id="ui">
+            <div class="card" id="card-Sovalye" onclick="kartSec('Sovalye', 3)"><span>Şövalye</span><span>💧3</span></div>
+            <div class="card" id="card-Okcu" onclick="kartSec('Okcu', 2)"><span>Okçu</span><span>💧2</span></div>
+            <div class="card" id="card-Dev" onclick="kartSec('Dev', 5)"><span>Dev</span><span>💧5</span></div>
+        </div>
     </div>
 
     <script src="game.js"></script>
