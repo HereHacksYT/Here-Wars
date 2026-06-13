@@ -58,6 +58,9 @@ light.position.set(4, 20, 6);
 scene.add(light);
 scene.add(new THREE.AmbientLight(0x666666));
 
+// Zaman İzleyici (Animasyonların akıcılığı için şart)
+const clock = new THREE.Clock();
+
 // Nehir ve Köprüler
 const riverGeo = new THREE.BoxGeometry(16, 0.1, 1.8);
 const riverMat = new THREE.MeshLambertMaterial({ color: 0x22a6b3 });
@@ -95,6 +98,28 @@ sinirIzgarasi.position.set(0, 0.06, 4.75);
 sinirIzgarasi.visible = false; 
 scene.add(sinirIzgarasi);
 
+// --- GLTF MODEL VE ANİMASYON HAFIZASI ---
+const gltfLoader = new THREE.GLTFLoader();
+const aktifMixerler = []; 
+const modelHafizasi = {}; 
+
+function modelleriOnYukle() {
+    const yuklenecekler = [
+        { ad: 'Dev', url: 'dev.glb' },
+        { ad: 'Okcu', url: 'okcu.glb' },
+        { ad: 'Sovalye', url: 'sovalye.glb' }
+    ];
+    yuklenecekler.forEach(m => {
+        gltfLoader.load(m.url, (gltf) => {
+            modelHafizasi[m.ad] = gltf;
+            console.log(`${m.ad} yüklendi!`);
+        }, undefined, (err) => {
+            console.log(`${m.ad} yüklenemedi (Dosya yok veya yolda hata var)`);
+        });
+    });
+}
+modelleriOnYukle();
+
 // --- KULELER VE SAYISAL CANLAR ---
 const kuleler = [];
 const askerler = [];
@@ -109,14 +134,12 @@ function kuleOlustur(x, z, renk, maxCan, taraf, tip) {
     govde.position.y = 0.9;
     kuleGrup.add(govde);
 
-    // Can Barı Arkalığı
     const barArkaGeo = new THREE.BoxGeometry(1.8, 0.18, 0.1);
     const barArkaMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
     const barArka = new THREE.Mesh(barArkaGeo, barArkaMat);
     barArka.position.set(0, 2.4, 0);
     kuleGrup.add(barArka);
 
-    // Can Çizgisi
     const barCanGeo = new THREE.BoxGeometry(1.75, 0.12, 0.12);
     const barCanMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
     const barCan = new THREE.Mesh(barCanGeo, barCanMat);
@@ -161,7 +184,6 @@ function iksirDoldur() {
     if (botIksir < maxIksir) botIksir += 0.025;
 }
 
-// --- SINIRLARI GÖRSEL OLARAK HİZALAMA VE DÜZELTME ---
 function kartSec(kartAdi, maliyet) {
     document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
     
@@ -172,22 +194,18 @@ function kartSec(kartAdi, maliyet) {
         
         sinirIzgarasi.geometry.dispose();
 
-        // Görsel Hata Çözümü: Eğer iki kule de duruyorsa sınır sadece kendi sahamız (Z: 0.5 ile 9)
         if (!botSolKuleYikildi && !botSagKuleYikildi) {
             sinirIzgarasi.geometry = new THREE.PlaneGeometry(12, 8.5);
             sinirIzgarasi.position.set(0, 0.06, 4.75); 
         } 
-        // Eğer sol kule yıkıldı ama sağ kule duruyorsa, sadece sol taraf nehrin ötesine uzanır
         else if (botSolKuleYikildi && !botSagKuleYikildi) {
             sinirIzgarasi.geometry = new THREE.PlaneGeometry(12, 13);
-            sinirIzgarasi.position.set(-2, 0.06, 2.5); // Sola doğru hafif kaydırarak gerçek alanı gösteriyoruz
+            sinirIzgarasi.position.set(-2, 0.06, 2.5); 
         } 
-        // Eğer sağ kule yıkıldı ama sol duruyorsa
         else if (!botSolKuleYikildi && botSagKuleYikildi) {
             sinirIzgarasi.geometry = new THREE.PlaneGeometry(12, 13);
-            sinirIzgarasi.position.set(2, 0.06, 2.5); // Sağa doğru kaydırıyoruz
+            sinirIzgarasi.position.set(2, 0.06, 2.5); 
         } 
-        // İki kule de yıkıldıysa full uzatabiliriz
         else {
             sinirIzgarasi.geometry = new THREE.PlaneGeometry(12, 13);
             sinirIzgarasi.position.set(0, 0.06, 2.5);
@@ -203,34 +221,40 @@ function sınırlarıGizle() {
 }
 
 function askerIndir(x, z, kartAdi, taraf) {
-    const askerGrup = new THREE.Group();
-    let geo, renk, hız, hasar, maxCan;
-
-    if (kartAdi === 'Dev') {
-        geo = new THREE.BoxGeometry(0.7, 1.2, 0.7);
-        renk = (taraf === 'oyuncu') ? 0x1565c0 : 0xc62828;
-        hız = 0.018; hasar = 4; maxCan = 250;
-    } else if (kartAdi === 'Okcu') {
-        geo = new THREE.CylinderGeometry(0.23, 0.23, 0.8, 8);
-        renk = (taraf === 'oyuncu') ? 0x3498db : 0xe74c3c;
-        hız = 0.045; hasar = 1.2; maxCan = 70;
-    } else {
-        geo = new THREE.ConeGeometry(0.35, 0.9, 8);
-        renk = (taraf === 'oyuncu') ? 0x1abc9c : 0xe67e22;
-        hız = 0.035; hasar = 2.2; maxCan = 120;
+    // Model henüz sunucudan yüklenmediyse güvenli çıkış yap
+    if (!modelHafizasi[kartAdi]) {
+        console.log(`${kartAdi} 3D modeli henüz tam yüklenmedi!`);
+        return;
     }
 
-    const mat = new THREE.MeshLambertMaterial({ color: renk });
-    const govde = new THREE.Mesh(geo, mat);
-    govde.position.y = 0.4;
-    askerGrup.add(govde);
+    const askerGrup = new THREE.Group();
+    let hız, hasar, maxCan;
 
+    if (kartAdi === 'Dev') { hız = 0.018; hasar = 4; maxCan = 250; } 
+    else if (kartAdi === 'Okcu') { hız = 0.045; hasar = 1.2; maxCan = 70; } 
+    else { hız = 0.035; hasar = 2.2; maxCan = 120; }
+
+    // Hazır 3D Model Klonlaması
+    const gltfKopyasi = modelHafizasi[kartAdi].scene.clone();
+    gltfKopyasi.scale.set(0.4, 0.4, 0.4); 
+    askerGrup.add(gltfKopyasi);
+
+    // Animasyonu Bağlama
+    const mixer = new THREE.AnimationMixer(gltfKopyasi);
+    if (modelHafizasi[kartAdi].animations.length > 0) {
+        const action = mixer.clipAction(modelHafizasi[kartAdi].animations[0]); // 0. sıradaki yürüme animasyonu varsayılır
+        action.play();
+    }
+    const animId = Math.random().toString(36);
+    aktifMixerler.push({ id: animId, mixer: mixer });
+
+    // Can Barları
     const bArka = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.08, 0.05), new THREE.MeshBasicMaterial({ color: 0x000000 }));
-    bArka.position.set(0, 1.2, 0);
+    bArka.position.set(0, 1.4, 0);
     askerGrup.add(bArka);
 
     const bCan = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.05, 0.06), new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
-    bCan.position.set(0, 1.2, 0.01);
+    bCan.position.set(0, 1.4, 0.01);
     askerGrup.add(bCan);
 
     askerGrup.position.set(x, 0, z);
@@ -239,7 +263,7 @@ function askerIndir(x, z, kartAdi, taraf) {
     askerGrup.userData = { 
         taraf: taraf, hiz: hız, hasar: hasar, can: maxCan, maxCan: maxCan,
         tip: kartAdi, gecitKopru: false, kopruHedef: (x < 0) ? kopruler[0] : kopruler[1],
-        barCan: bCan, canli: true 
+        barCan: bCan, canli: true, animasyonId: animId
     };
     askerler.push(askerGrup);
 }
@@ -258,7 +282,6 @@ window.addEventListener('pointerdown', (e) => {
     if (intersects.length > 0) {
         const nokta = intersects[0].point;
         
-        // Mantıksal Bırakma Sınırı Kontrolü
         let gecerliSinirZ = 0.5; 
         if (nokta.x < 0 && botSolKuleYikildi) gecerliSinirZ = -4;
         if (nokta.x > 0 && botSagKuleYikildi) gecerliSinirZ = -4;
@@ -284,7 +307,7 @@ setInterval(() => {
     }
 }, 3500);
 
-// HTML Sayısal Canları Ekrana Bağlama Fonksiyonu
+// Sayısal Kule Canı Arayüz Senkronizasyonu
 function kuleCanlariniGuncelle() {
     kuleler.forEach(kule => {
         if (!kule.userData.canli) {
@@ -300,10 +323,7 @@ function kuleCanlariniGuncelle() {
         const x = (wp.x * .5 + .5) * window.innerWidth;
         let y = (-(wp.y * .5) + .5) * window.innerHeight;
 
-        // UI Çakışma Düzeltmesi: Oyuncu kulelerinin yazılarını barın arkasına kaçmasın diye biraz yukarı çekiyoruz
-        if (kule.userData.taraf === 'oyuncu') {
-            y -= 12; 
-        }
+        if (kule.userData.taraf === 'oyuncu') { y -= 12; }
 
         kule.userData.canYazisi.style.left = `${x}px`;
         kule.userData.canYazisi.style.top = `${y}px`;
@@ -311,15 +331,23 @@ function kuleCanlariniGuncelle() {
     });
 }
 
-// --- ANA DÖNGÜ ---
+// --- ANA MATRİS DÖNGÜSÜ ---
 function animate() {
     requestAnimationFrame(animate);
     iksirDoldur();
     if (oyunBasladi) kuleCanlariniGuncelle();
 
+    // Animasyon Zamanlayıcı Güncellemesi
+    const delta = clock.getDelta();
+    aktifMixerler.forEach(m => m.mixer.update(delta));
+
     if (oyunBasladi) {
         for (let i = askerler.length - 1; i >= 0; i--) {
             if (!askerler[i].userData.canli) {
+                // Bellekten animasyon verilerini kazı
+                const idx = aktifMixerler.findIndex(m => m.id === askerler[i].userData.animasyonId);
+                if (idx !== -1) aktifMixerler.splice(idx, 1);
+
                 scene.remove(askerler[i]);
                 askerler.splice(i, 1);
             }
