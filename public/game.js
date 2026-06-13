@@ -45,7 +45,6 @@ function macBitir(durum) {
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x52b788);
 
-// Kamera açısı ve görünüm stabil hale getirildi
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 18, 12); 
 camera.lookAt(0, 0, -1);
@@ -76,15 +75,23 @@ function kopruCiz(x) {
 }
 kopruCiz(-3.5); kopruCiz(3.5);
 
-// Tıklama tespiti için tam zemin plane'i (Görünmez)
+// Zemin Tıklama Alanı
 const groundGeo = new THREE.PlaneGeometry(30, 30);
 const groundMat = new THREE.MeshBasicMaterial({ visible: false });
 const ground = new THREE.Mesh(groundGeo, groundMat);
 ground.rotation.x = -Math.PI / 2;
-ground.position.y = 0;
 scene.add(ground);
 
-// --- KULELER VE DETAYLAR ---
+// DİNAMİK BEYAZ SINIR GÖSTERGESİ
+const sinirGeo = new THREE.PlaneGeometry(13, 8.5); 
+const sinirMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
+const sinirIzgarasi = new THREE.Mesh(sinirGeo, sinirMat);
+sinirIzgarasi.rotation.x = -Math.PI / 2;
+sinirIzgarasi.position.set(0, 0.06, 4.5); 
+sinirIzgarasi.visible = false; 
+scene.add(sinirIzgarasi);
+
+// --- KULELER VE LİSTELER ---
 const kuleler = [];
 const askerler = [];
 const oklar = [];
@@ -111,11 +118,8 @@ function kuleKoruyucuEkle(renk, tip, kuleGrup, taraf) {
         const tac = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 0.15, 8, 1, true), new THREE.MeshBasicMaterial({color: 0xffcc00})); tac.position.y = 0.65; koruyucu.add(tac);
     }
 
-    // Kule üstü konumu
     koruyucu.position.set(0, 1.1, 0);
-    // YÖN DÜZELTMESİ: Oyuncu kulelerindeki adamlar yukarı (botlara), bot kulelerindekiler aşağı (oyuncuya) bakacak
     koruyucu.rotation.y = (taraf === 'oyuncu') ? Math.PI : 0;
-    
     kuleGrup.add(koruyucu);
     return koruyucu;
 }
@@ -133,17 +137,13 @@ function kuleOlustur(x, z, maxCan, taraf, tip) {
     const koruyucuTip = (tip === 'ana' ? 'kral' : 'okcu');
     const koruyucuFigur = kuleKoruyucuEkle(renk, koruyucuTip, kuleGrup, taraf);
 
-    // Can Barı Siyah Arka Plan
     const barArkaGeo = new THREE.BoxGeometry(1.6, 0.16, 0.1);
-    const barArkaMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-    const barArka = new THREE.Mesh(barArkaGeo, barArkaMat);
+    const barArka = new THREE.Mesh(barArkaGeo, new THREE.MeshBasicMaterial({ color: 0x000000 }));
     barArka.position.set(0, 2.1, 0);
     kuleGrup.add(barArka);
 
-    // Can Çizgisi (Yeşil)
     const barCanGeo = new THREE.BoxGeometry(1.55, 0.11, 0.12);
-    const barCanMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-    const barCan = new THREE.Mesh(barCanGeo, barCanMat);
+    const barCan = new THREE.Mesh(barCanGeo, new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
     barCan.position.set(0, 2.1, 0.02);
     kuleGrup.add(barCan);
 
@@ -155,14 +155,13 @@ function kuleOlustur(x, z, maxCan, taraf, tip) {
         x: x, z: z, barCan: barCan, canli: true, 
         koruyucu: koruyucuFigur, koruyucuTip: koruyucuTip, 
         kralUyanik: (tip === 'ana' ? false : true),
-        hasar: (tip === 'ana' ? 15 : 6),
-        menzil: (tip === 'ana' ? 4.5 : 5.5),
+        hasar: (tip === 'ana' ? 35 : 22), // Kule hasarları dengelendi, okçuları eritebilir
+        menzil: (tip === 'ana' ? 5.0 : 6.0),
         sonAtesZamani: 0
     };
     kuleler.push(kuleGrup);
 }
 
-// Kule Konumları
 kuleOlustur(-3.5, 5.5, 800, 'oyuncu', 'sol');
 kuleOlustur(3.5, 5.5, 800, 'oyuncu', 'sag');
 kuleOlustur(0, 6.8, 1600, 'oyuncu', 'ana');
@@ -183,44 +182,66 @@ function iksirDoldur() {
     if (botIksir < maxIksir) botIksir += 0.025;
 }
 
+// KART SEÇİLDİĞİNDE BEYAZ ALAN SINIRINI DİNAMİK GÜNCELLE
 function kartSec(kartAdi, maliyet) {
     document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
     if (oyuncuIksir >= maliyet) {
         seciliKart = kartAdi;
         seciliKartMaliyet = maliyet;
         document.getElementById('card-' + kartAdi).classList.add('active');
+
+        // Yıkılan kuleye göre beyaz çizgiyi büyütme mantığı
+        sinirIzgarasi.geometry.dispose();
+        if (botSolKuleYikildi && botSagKuleYikildi) {
+            sinirIzgarasi.geometry = new THREE.PlaneGeometry(13, 14);
+            sinirIzgarasi.position.set(0, 0.06, 1.8);
+        } else if (botSolKuleYikildi) {
+            sinirIzgarasi.geometry = new THREE.PlaneGeometry(13, 14); // Tam kapla, tıklamada süzgeç uygularız
+            sinirIzgarasi.position.set(0, 0.06, 1.8);
+        } else if (botSagKuleYikildi) {
+            sinirIzgarasi.geometry = new THREE.PlaneGeometry(13, 14);
+            sinirIzgarasi.position.set(0, 0.06, 1.8);
+        } else {
+            sinirIzgarasi.geometry = new THREE.PlaneGeometry(13, 8.5);
+            sinirIzgarasi.position.set(0, 0.06, 4.5);
+        }
+        sinirIzgarasi.visible = true;
     }
 }
 
+function sınırlarıGizle() {
+    sinirIzgarasi.visible = false;
+    document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+}
+
 function okFirlat(baslangicPos, hedefNesne, hasar) {
-    const okGeo = new THREE.SphereGeometry(0.08, 4, 4);
+    const okGeo = new THREE.SphereGeometry(0.09, 4, 4);
     const okMat = new THREE.MeshBasicMaterial({ color: 0xffcc00 });
     const okMesh = new THREE.Mesh(okGeo, okMat);
     okMesh.position.copy(baslangicPos);
     okMesh.position.y += 0.8;
     scene.add(okMesh);
-
-    oklar.push({ mesh: okMesh, hedef: hedefNesne, hasar: hasar, hiz: 0.16 });
+    oklar.push({ mesh: okMesh, hedef: hedefNesne, hasar: hasar, hiz: 0.22 });
 }
 
-// --- ROBOT MOTORU ---
+// --- ASKER MOTORU ---
 function askerIndir(x, z, kartAdi, taraf) {
     const askerGrup = new THREE.Group();
     let geo, matAna, matDetay, hız, hasar, maxCan, menzil;
 
     if (kartAdi === 'Dev') {
         geo = new THREE.BoxGeometry(0.65, 1.1, 0.65);
-        hız = 0.02; hasar = 5; maxCan = 260; menzil = 1.1;
+        hız = 0.02; hasar = 28; maxCan = 320; menzil = 1.2;
     } else if (kartAdi === 'Okcu') {
         geo = new THREE.CylinderGeometry(0.2, 0.2, 0.7, 8);
-        hız = 0.042; hasar = 10; maxCan = 75; menzil = 3.8;
+        hız = 0.042; hasar = 14; maxCan = 75; menzil = 3.8;
     } else {
         geo = new THREE.BoxGeometry(0.45, 0.7, 0.45);
-        hız = 0.036; hasar = 15; maxCan = 130; menzil = 1.1;
+        hız = 0.036; hasar = 22; maxCan = 140; menzil = 1.1;
     }
 
     if (taraf === 'oyuncu') {
-        matAna = new THREE.MeshLambertMaterial({ color: OYUNCU_ANA });
+        matAna = new THREE.MeshLambertMaterial({ color: OYUNCU_ANCHOR = OYUNCU_ANA });
         matDetay = new THREE.MeshLambertMaterial({ color: OYUNCU_DETAY });
     } else {
         matAna = new THREE.MeshLambertMaterial({ color: BOT_ANA });
@@ -262,7 +283,7 @@ function askerIndir(x, z, kartAdi, taraf) {
     askerler.push(askerGrup);
 }
 
-// ASKER KOYMA MOTORU YENİLENDİ (Sorunsuz Dokunma Sistemi)
+// DOKUNMA VE DİNAMİK YENİ ALANA SPAWN MOTORU
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
@@ -278,12 +299,21 @@ window.addEventListener('pointerdown', (e) => {
     if (intersects.length > 0) {
         const nokta = intersects[0].point;
         
-        // Sınır Kontrolü (Oyuncu kendi yarı sahasına koyabilir)
-        if (nokta.z > 0.2 && nokta.z < 8.5 && Math.abs(nokta.x) < 6.5 && oyuncuIksir >= seciliKartMaliyet) {
+        // Dinamik sınır kontrolü: Kule yıkıldıysa üst sahaya izin ver
+        let izinVerildi = false;
+        if (nokta.z > 0.2 && nokta.z < 8.5 && Math.abs(nokta.x) < 6.5) {
+            izinVerildi = true; // Kendi sahamız
+        } else if (botSolKuleYikildi && nokta.x < 0 && nokta.z > -5.0 && nokta.z <= 0.2 && nokta.x > -6.5) {
+            izinVerildi = true; // Sol kule yıkıldı, sol üst sahaya asker koyulabilir!
+        } else if (botSagKuleYikildi && nokta.x > 0 && nokta.z > -5.0 && nokta.z <= 0.2 && nokta.x < 6.5) {
+            izinVerildi = true; // Sağ kule yıkıldı, sağ üst sahaya asker koyulabilir!
+        }
+
+        if (izinVerildi && oyuncuIksir >= seciliKartMaliyet) {
             askerIndir(nokta.x, nokta.z, seciliKart, 'oyuncu');
             oyuncuIksir -= seciliKartMaliyet;
             seciliKart = null;
-            document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+            sınırlarıGizle();
         }
     }
 });
@@ -300,13 +330,13 @@ setInterval(() => {
     }
 }, 3500);
 
-// --- ANA DÖNGÜ VE DÜZGÜN YÜRÜME MOTORU ---
+// --- ANA MOTOR DÖNGÜSÜ ---
 function animate() {
     requestAnimationFrame(animate);
     iksirDoldur();
     
     if (oyunBasladi) {
-        // Can barlarının ölçeklemesini kontrol altında tutuyoruz
+        // Kule Can barlarını görsel ölçekle
         kuleler.forEach(k => {
             if (k.userData.canli) {
                 let oran = k.userData.can / k.userData.maxCan;
@@ -314,7 +344,7 @@ function animate() {
             }
         });
 
-        // 1. Ölü asker temizliği
+        // 1. Ölüleri temizle
         for (let i = askerler.length - 1; i >= 0; i--) {
             if (!askerler[i].userData.canli) {
                 scene.remove(askerler[i]);
@@ -322,7 +352,7 @@ function animate() {
             }
         }
 
-        // 2. Mermileri/Okları uçur ve can düşür
+        // 2. Okları ve Hasarları uçur
         for (let i = oklar.length - 1; i >= 0; i--) {
             let ok = oklar[i];
             if (!ok.hedef.userData.canli) { scene.remove(ok.mesh); oklar.splice(i, 1); continue; }
@@ -337,6 +367,12 @@ function animate() {
             if (ok.mesh.position.distanceTo(hPos) < 0.3) {
                 ok.hedef.userData.can -= ok.hasar;
                 
+                // Asker can barını anında küçült
+                if(ok.hedef.userData.maxCan < 500 && ok.hedef.userData.barCan) {
+                    let aOran = ok.hedef.userData.can / ok.hedef.userData.maxCan;
+                    ok.hedef.userData.barCan.scale.x = Math.max(0.001, aOran);
+                }
+
                 if(ok.hedef.userData.tip === 'ana' && !ok.hedef.userData.kralUyanik) {
                     ok.hedef.userData.kralUyanik = true;
                 }
@@ -346,8 +382,8 @@ function animate() {
                     if (ok.hedef.userData.tip === 'ana') { 
                         macBitir(ok.hedef.userData.taraf === 'bot' ? 'kazandin' : 'kaybettin'); 
                     } else {
-                        if (ok.hedef.userData.tip === 'sol') botSolKuleYikildi = true;
-                        if (ok.hedef.userData.tip === 'sag') botSagKuleYikildi = true;
+                        if (ok.hedef.userData.tip === 'sol' && ok.hedef.userData.taraf === 'bot') botSolKuleYikildi = true;
+                        if (ok.hedef.userData.tip === 'sag' && ok.hedef.userData.taraf === 'bot') botSagKuleYikildi = true;
                         scene.remove(ok.hedef);
                     }
                 }
@@ -355,10 +391,10 @@ function animate() {
             }
         }
 
-        // 3. Kule savunma mekanizması
+        // 3. Kuleler Gerçek Zamanlı Hasar Veriyor
         kuleler.forEach(kule => {
             if (!kule.userData.canli) return;
-            
+
             let hedon = null; let enYakinMesafe = 999;
             askerler.forEach(rakip => {
                 if (rakip.userData.canli && rakip.userData.taraf !== kule.userData.taraf) {
@@ -369,54 +405,68 @@ function animate() {
 
             if (hedon && (kule.userData.koruyucuTip === 'okcu' || kule.userData.kralUyanik)) {
                 let simdi = Date.now();
-                if (simdi - kule.userData.sonAtesZamani > (kule.userData.koruyucuTip === 'okcu' ? 1300 : 1700)) {
+                if (simdi - kule.userData.sonAtesZamani > (kule.userData.koruyucuTip === 'okcu' ? 1000 : 1400)) { // Ateş hızı artırıldı
                     okFirlat(kule.position, hedon, kule.userData.hasar);
                     kule.userData.sonAtesZamani = simdi;
                 }
             }
         });
 
-        // 4. Askerlerin kusursuz lookAt yürüyüş mekanizması
+        // 4. Askerlerin Savaş Yapay Zekası (Dev Kuralı eklendi)
         askerler.forEach(asker => {
             if (!asker.userData.canli) return;
             
             let hedon = null; let enYakinMesafe = 999;
-            // Önce rakip asker ara
-            askerler.forEach(rakip => {
-                if (rakip.userData.canli && rakip.userData.taraf !== asker.userData.taraf) {
-                    let d = asker.position.distanceTo(rakip.position);
-                    if (d < enYakinMesafe && d < 4.5) { enYakinMesafe = d; hedon = rakip; }
-                }
-            });
-            // Yoksa kuleye yönlen
-            if (!hedon) {
+
+            // DEV ÖZEL KURALI: Birlikleri tamamen pas geç, sadece kule ara!
+            if (asker.userData.tip === 'Dev') {
                 kuleler.forEach(kule => {
                     if (kule.userData.canli && kule.userData.taraf !== asker.userData.taraf) {
                         let d = asker.position.distanceTo(kule.position);
                         if (d < enYakinMesafe) { enYakinMesafe = d; hedon = kule; }
                     }
                 });
+            } else {
+                // Diğer askerler önce en yakın düşman askere koşar
+                askerler.forEach(rakip => {
+                    if (rakip.userData.canli && rakip.userData.taraf !== asker.userData.taraf) {
+                        let d = asker.position.distanceTo(rakip.position);
+                        if (d < enYakinMesafe && d < 4.5) { enYakinMesafe = d; hedon = rakip; }
+                    }
+                });
+                // Yakında asker yoksa kuleye yönlenir
+                if (!hedon) {
+                    kuleler.forEach(kule => {
+                        if (kule.userData.canli && kule.userData.taraf !== asker.userData.taraf) {
+                            let d = asker.position.distanceTo(kule.position);
+                            if (d < enYakinMesafe) { enYakinMesafe = d; hedon = kule; }
+                        }
+                    });
+                }
             }
 
             if (hedon) {
-                // Menzile girdi mi?
                 if (enYakinMesafe <= asker.userData.menzil) {
-                    asker.userData.bSol.rotation.x = 0; 
-                    asker.userData.bSag.rotation.x = 0;
+                    asker.userData.bSol.rotation.x = 0; asker.userData.bSag.rotation.x = 0;
                     
-                    // Savaşırken hedefe doğru bak
                     let tPos = new THREE.Vector3(hedon.position.x, asker.position.y, hedon.position.z);
                     asker.lookAt(tPos);
 
                     if (asker.userData.tip === 'Okcu') {
                         let simdi = Date.now();
-                        if (simdi - asker.userData.sonAtesZamani > 1300) {
+                        if (simdi - asker.userData.sonAtesZamani > 1200) {
                             okFirlat(asker.position, hedon, asker.userData.hasar);
                             asker.userData.sonAtesZamani = simdi;
                         }
                     } else {
-                        // Yakın dövüş hasarı
-                        hedon.userData.can -= asker.userData.hasar / 60;
+                        // Yakın dövüş saniyede bir tetiklenir gibi ayarlandı
+                        hedon.userData.can -= asker.userData.hasar / 45;
+                        
+                        if(hedon.userData.maxCan < 500 && hedon.userData.barCan) {
+                            let hOran = hedon.userData.can / hedon.userData.maxCan;
+                            hedon.userData.barCan.scale.x = Math.max(0.001, hOran);
+                        }
+
                         if (hedon.userData.can <= 0) {
                             hedon.userData.canli = false;
                             if (hedon.userData.tip === 'ana') { macBitir(hedon.userData.taraf === 'bot' ? 'kazandin' : 'kaybettin'); }
@@ -426,30 +476,25 @@ function animate() {
                     return;
                 }
 
-                // YÜRÜME VE BAKMA MANTIĞI (LOOKAT İLE ARTIK TERS DÖNMEZ)
+                // Düzgün Yürüme ve Kusursuz İleri Bakma Motoru
                 asker.userData.adim += 0.2;
                 let sallanti = Math.sin(asker.userData.adim) * 0.5;
-                asker.userData.bSol.rotation.x = sallanti; 
-                asker.userData.bSag.rotation.x = -sallanti;
+                asker.userData.bSol.rotation.x = sallanti; asker.userData.bSag.rotation.x = -sallanti;
 
                 let hX = hedon.position.x; let hZ = hedon.position.z;
-                // Köprü geçiş rotası kontrolü
                 if (!asker.userData.gecitKopru && ((asker.userData.taraf === 'oyuncu' && asker.position.z > 0) || (asker.userData.taraf === 'bot' && asker.position.z < 0))) {
                     hX = asker.userData.kopruHedef.x; hZ = asker.userData.kopruHedef.z;
                     if (Math.abs(asker.position.z - hZ) < 0.3) asker.userData.gecitKopru = true;
                 }
 
-                // Adım yönü belirleme
                 let hareketYonu = new THREE.Vector3(hX - asker.position.x, 0, hZ - asker.position.z).normalize();
                 asker.position.addScaledVector(hareketYonu, asker.userData.hiz);
 
-                // Gittiği noktaya tam düzgün bakması için yerleşik lookAt tetikliyoruz
                 let bakilacakNokta = new THREE.Vector3(asker.position.x + hareketYonu.x, asker.position.y, asker.position.z + hareketYonu.z);
                 asker.lookAt(bakilacakNokta);
             }
         });
     }
-    
     renderer.render(scene, camera);
 }
 animate();
