@@ -2,56 +2,68 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Here Wars - 3D</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Here Wars</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; background: #222; user-select: none; }
+        * { box-sizing: border-box; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: 'Arial', sans-serif; background: #222; user-select: none; }
         
+        /* EKRANI DİK TUTMA ZORUNLULUĞU */
+        @media screen and (orientation: landscape) {
+            body::after {
+                content: "Lütfen telefonunuzu dik tutun!";
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: #222; color: white; z-index: 9999;
+                display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold;
+            }
+        }
+
         /* GİRİŞ MENÜSÜ */
         #menu-ekrani {
             position: absolute; width: 100%; height: 100%;
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 100; color: white;
+            z-index: 100; color: white; padding: 20px;
         }
-        #menu-ekrani h1 { font-size: 42px; margin-bottom: 30px; text-shadow: 2px 4px 10px rgba(0,0,0,0.5); font-style: italic; }
+        #menu-ekrani h1 { font-size: 46px; margin-bottom: 20px; text-shadow: 2px 4px 10px rgba(0,0,0,0.5); font-style: italic; font-weight: 900; letter-spacing: 2px; }
         
-        .secenek-grubu { display: flex; gap: 20px; margin-bottom: 40px; }
+        .secenek-grubu { display: flex; flex-direction: column; gap: 15px; margin-bottom: 40px; width: 80%; max-width: 250px; }
         .secenek-btn {
-            padding: 15px 25px; background: #333; border: 3px solid #fff; border-radius: 12px;
-            color: white; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.2s;
+            padding: 15px; background: rgba(0,0,0,0.4); border: 3px solid rgba(255,255,255,0.4); border-radius: 15px;
+            color: white; font-weight: bold; cursor: pointer; font-size: 16px; text-align: center; transition: 0.2s;
         }
-        .secenek-btn.secili { background: #00bcd4; border-color: #fff; transform: scale(1.05); }
+        .secenek-btn.secili { background: #00bcd4; border-color: #fff; transform: scale(1.05); box-shadow: 0 0 15px #00bcd4; }
 
-        /* İstediğin Sarı Başlama Butonu */
         #basla-btn {
-            padding: 20px 60px; background: #ffcc00; border: none; border-radius: 15px;
-            font-size: 24px; font-weight: bold; color: #333; cursor: pointer;
+            padding: 18px 60px; background: #ffcc00; border: none; border-radius: 20px;
+            font-size: 26px; font-weight: bold; color: #333; cursor: pointer;
             box-shadow: 0 6px 0 #cc9900, 0 10px 20px rgba(0,0,0,0.4); transition: 0.1s;
         }
-        #basla-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #cc9900, 0 4px 10px rgba(0,0,0,0.4); }
+        #basla-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #cc9900; }
 
-        /* OYUN İÇİ ARAYÜZ (UI) */
-        #oyun-ui { display: none; } /* Başta gizli, oyuna girince açılacak */
-        #ui {
-            position: absolute; bottom: 20px; left: 50%;
-            transform: translateX(-50%); display: flex; gap: 12px; z-index: 10;
-        }
-        .card {
-            width: 85px; height: 105px; background: #f0f0f0;
-            border: 3px solid #222; border-radius: 12px;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-weight: bold; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.5);
-        }
-        .card.active { border-color: #ffcc00; background: #fffde6; transform: scale(1.05); }
+        /* OYUN UI (KARTLAR ARTIK KULEYİ KAPATMIYOR) */
+        #oyun-ui { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; pointer-events: none; }
         
+        #alt-panel {
+            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            width: 100%; max-width: 360px; padding: 0 10px; pointer-events: auto;
+        }
+
         #iksir-bar {
-            position: absolute; bottom: 140px; left: 50%;
-            transform: translateX(-50%); width: 290px; height: 22px;
-            background: #333; border: 2px solid #fff; border-radius: 11px; overflow: hidden; z-index: 10;
+            width: 90%; height: 18px; background: #333; border: 2px solid #fff; border-radius: 9px; overflow: hidden; position: relative;
         }
         #iksir-doluluk { width: 0%; height: 100%; background: #e000e0; transition: width 0.1s linear; }
-        #iksir-metin { position: absolute; width: 100%; text-align: center; color: white; font-weight: bold; font-size: 14px; line-height: 22px; z-index: 11; }
+        #iksir-metin { position: absolute; width: 100%; text-align: center; color: white; font-weight: bold; font-size: 12px; line-height: 14px; text-shadow: 1px 1px 2px #000; }
+        
+        #ui { display: flex; gap: 10px; width: 100%; justify-content: center; }
+        .card {
+            width: 75px; height: 95px; background: #f5f5f5; border: 3px solid #333; border-radius: 12px;
+            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+            padding: 8px 0; font-weight: bold; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.4); font-size: 13px;
+        }
+        .card.active { border-color: #ffcc00; background: #fffde6; transform: translateY(-8px); box-shadow: 0 8px 12px rgba(255,204,0,0.4); }
+        .card span:last-child { color: #d500f9; font-size: 12px; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -67,15 +79,16 @@
     </div>
 
     <div id="oyun-ui">
-        <div id="iksir-bar">
-            <div id="iksir-metin">0 / 10</div>
-            <div id="iksir-doluluk"></div>
-        </div>
-        
-        <div id="ui">
-            <div class="card" id="card-Sovalye" onclick="kartSec('Sovalye', 3)"><span>Şövalye</span><span>💧3</span></div>
-            <div class="card" id="card-Okcu" onclick="kartSec('Okcu', 2)"><span>Okçu</span><span>💧2</span></div>
-            <div class="card" id="card-Dev" onclick="kartSec('Dev', 5)"><span>Dev</span><span>💧5</span></div>
+        <div id="alt-panel">
+            <div id="iksir-bar">
+                <div id="iksir-metin">0 / 10</div>
+                <div id="iksir-doluluk"></div>
+            </div>
+            <div id="ui">
+                <div class="card" id="card-Sovalye" onclick="kartSec('Sovalye', 3)"><span>Şövalye</span><span>💧3</span></div>
+                <div class="card" id="card-Okcu" onclick="kartSec('Okcu', 2)"><span>Okçu</span><span>💧2</span></div>
+                <div class="card" id="card-Dev" onclick="kartSec('Dev', 5)"><span>Dev</span><span>💧5</span></div>
+            </div>
         </div>
     </div>
 
