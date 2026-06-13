@@ -3,118 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Clash Royale Bot Edition</title>
+    <title>Here Wars - 3D Bot Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+        body { margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; background: #000; }
+        
+        /* Oyun İçi Arayüz (UI) */
         #ui {
             position: absolute; bottom: 20px; left: 50%;
-            transform: translateX(-50%); display: flex; gap: 10px;
+            transform: translateX(-50%); display: flex; gap: 15px; z-index: 10;
         }
         .card {
-            width: 80px; height: 100px; background: #e0e0e0;
-            border: 3px solid #333; border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: bold; cursor: pointer; user-select: none;
+            width: 90px; height: 110px; background: #f0f0f0;
+            border: 3px solid #222; border-radius: 12px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-weight: bold; cursor: pointer; user-select: none; box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
         }
+        .card:hover { transform: scale(1.05); }
+        .card.active { border-color: #ffcc00; background: #fffde6; }
+        
         #iksir-bar {
-            position: absolute; bottom: 130px; left: 50%;
-            transform: translateX(-50%); width: 300px; height: 20px;
-            background: #444; border-radius: 10px; overflow: hidden;
+            position: absolute; bottom: 145px; left: 50%;
+            transform: translateX(-50%); width: 310px; height: 22px;
+            background: #333; border: 2px solid #fff; border-radius: 11px; overflow: hidden; z-index: 10;
         }
         #iksir-doluluk {
-            width: 0%; height: 100%; background: #ca00ca;
+            width: 0%; height: 100%; background: #e000e0;
             transition: width 0.1s linear;
         }
+        #iksir-metin {
+            position: absolute; width: 100%; text-align: center; color: white;
+            font-weight: bold; font-size: 14px; line-height: 22px; z-index: 11;
+        }
     </style>
-    <!-- Three.js Kütüphanesi -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <div id="iksir-bar"><div id="iksir-doluluk"></div></div>
+    <div id="iksir-bar">
+        <div id="iksir-metin">0 / 10</div>
+        <div id="iksir-doluluk"></div>
+    </div>
+    
     <div id="ui">
-        <div class="card" onclick="kartSec('Sovalye')">Şövalye<br>(3)</div>
-        <div class="card" onclick="kartSec('Okcu')">Okçu<br>(2)</div>
-        <div class="card" onclick="kartSec('Dev')">Dev<br>(5)</div>
+        <div class="card" id="card-Sovalye" onclick="kartSec('Sovalye', 3)"><span>Şövalye</span><span>💧3</span></div>
+        <div class="card" id="card-Okcu" onclick="kartSec('Okcu', 2)"><span>Okçu</span><span>💧2</span></div>
+        <div class="card" id="card-Dev" onclick="kartSec('Dev', 5)"><span>Dev</span><span>💧5</span></div>
     </div>
 
-    <script>
-        // --- THREE.JS KURULUMU ---
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x3f9b3f); // Çim rengi arena
-
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 15, 12); // Arenayı yukarıdan görecek açı
-        camera.lookAt(0, 0, -2);
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-
-        // Işıklandırma
-        const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(5, 15, 5).normalize();
-        scene.add(light);
-        scene.add(new THREE.AmbientLight(0x404040));
-
-        // --- ARENA VE KULELER ---
-        // Nehir çizimi (Basit bir mavi kutu)
-        const riverGeo = new THREE.BoxGeometry(16, 0.1, 2);
-        const riverMat = new THREE.MeshLambertMaterial({ color: 0x4169e1 });
-        const river = new THREE.Mesh(riverGeo, riverMat);
-        river.position.set(0, 0.05, 0);
-        scene.add(river);
-
-        // Kule oluşturma fonksiyonu
-        function kuleYarat(x, z, renk) {
-            const geo = new THREE.CylinderGeometry(0.8, 1, 2, 8);
-            const mat = new THREE.MeshLambertMaterial({ color: renk });
-            const kule = new THREE.Mesh(geo, mat);
-            kule.position.set(x, 1, z);
-            scene.add(kule);
-        }
-
-        // Oyuncu Kuleleri (Mavi) - Aşağıda
-        kuleYarat(-3, 6, 0x0000ff); // Sol kule
-        kuleYarat(3, 6, 0x0000ff);  // Sağ kule
-        kuleYarat(0, 7, 0x00008b);  // Ana kule
-
-        // Bot Kuleleri (Kırmızı) - Yukarıda
-        kuleYarat(-3, -6, 0xff0000); // Sol kule
-        kuleYarat(3, -6, 0xff0000);  // Sağ kule
-        kuleYarat(0, -7, 0x8b0000);  // Ana kule
-
-        // --- OYUN MANTIĞI VE İKSİR ---
-        let iksir = 0;
-        const maxIksir = 10;
-        
-        function iksirGuncelle() {
-            if (iksir < maxIksir) {
-                iksir += 0.02; // İksir dolum hızı
-                document.getElementById('iksir-doluluk').style.width = (iksir / maxIksir * 100) + '%';
-            }
-        }
-
-        function kartSec(kartAdi) {
-            console.log(kartAdi + " seçildi! Şimdi sahaya tıklayarak bırakabilirsin.");
-            // İleride buraya tıklanan yere asker ışınlama mantığı ekleyeceğiz
-        }
-
-        // --- ANIMASYON DÖNGÜSÜ ---
-        function animate() {
-            requestAnimationFrame(animate);
-            iksirGuncelle();
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        // Pencere boyutu değiştiğinde ekranı ayarla
-        window.addEventListener('resize', onWindowResize, false);
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-    </script>
+    <script src="game.js"></script>
 </body>
 </html>
