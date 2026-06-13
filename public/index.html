@@ -8,7 +8,6 @@
         * { box-sizing: border-box; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: 'Arial', sans-serif; background: #222; user-select: none; }
         
-        /* EKRANI DİK TUTMA ZORUNLULUĞU */
         @media screen and (orientation: landscape) {
             body::after {
                 content: "Lütfen telefonunuzu dik tutun!";
@@ -39,20 +38,30 @@
             font-size: 26px; font-weight: bold; color: #333; cursor: pointer;
             box-shadow: 0 6px 0 #cc9900, 0 10px 20px rgba(0,0,0,0.4); transition: 0.1s;
         }
-        #basla-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #cc9900; }
 
-        /* OYUN UI (KARTLAR ARTIK KULEYİ KAPATMIYOR) */
+        /* OYUN İÇİ SÜRE SAYACI */
+        #sure-sayaci {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6); color: white; padding: 8px 20px;
+            border-radius: 20px; font-size: 20px; font-weight: bold; z-index: 50;
+            border: 2px solid #fff; display: none; text-shadow: 1px 1px 2px #000;
+        }
+
+        /* MAÇ SONU EKRANI */
+        #mac-sonu-ekrani {
+            position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.85);
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 200; color: white; font-size: 40px; font-weight: bold; text-align: center;
+        }
+
+        /* OYUN UI */
         #oyun-ui { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; pointer-events: none; }
-        
         #alt-panel {
             position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
             display: flex; flex-direction: column; align-items: center; gap: 8px;
             width: 100%; max-width: 360px; padding: 0 10px; pointer-events: auto;
         }
-
-        #iksir-bar {
-            width: 90%; height: 18px; background: #333; border: 2px solid #fff; border-radius: 9px; overflow: hidden; position: relative;
-        }
+        #iksir-bar { width: 90%; height: 18px; background: #333; border: 2px solid #fff; border-radius: 9px; overflow: hidden; position: relative; }
         #iksir-doluluk { width: 0%; height: 100%; background: #e000e0; transition: width 0.1s linear; }
         #iksir-metin { position: absolute; width: 100%; text-align: center; color: white; font-weight: bold; font-size: 12px; line-height: 14px; text-shadow: 1px 1px 2px #000; }
         
@@ -77,6 +86,10 @@
         </div>
         <button id="basla-btn" onclick="oyunuBaslat()">BAŞLA</button>
     </div>
+
+    <div id="mac-sonu-ekrani" id="mac-sonu-metin">MAÇ BİTTİ</div>
+
+    <div id="sure-sayaci">03:00</div>
 
     <div id="oyun-ui">
         <div id="alt-panel">
