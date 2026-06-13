@@ -82,7 +82,7 @@ ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
 
 // --- DİNAMİK ATMA SINIRI GÖRSELİ (IZGARA) ---
-const sinirGeo = new THREE.PlaneGeometry(12, 10); // Varsayılan kendi sahamızın boyutu (Genişlik: 12, Derinlik: 10)
+const sinirGeo = new THREE.PlaneGeometry(12, 8.5); 
 const sinirMat = new THREE.MeshBasicMaterial({ 
     color: 0xffffff, 
     transparent: true, 
@@ -91,8 +91,8 @@ const sinirMat = new THREE.MeshBasicMaterial({
 });
 const sinirIzgarasi = new THREE.Mesh(sinirGeo, sinirMat);
 sinirIzgarasi.rotation.x = -Math.PI / 2;
-sinirIzgarasi.position.set(0, 0.06, 4.5); // Kendi sahamızın ortası (Z: 0.5 ile 8.5 arası)
-sinirIzgarasi.visible = false; // Kart seçilmedikçe gizli
+sinirIzgarasi.position.set(0, 0.06, 4.75); 
+sinirIzgarasi.visible = false; 
 scene.add(sinirIzgarasi);
 
 // --- KULELER VE SAYISAL CANLAR ---
@@ -126,7 +126,6 @@ function kuleOlustur(x, z, renk, maxCan, taraf, tip) {
     kuleGrup.position.set(x, 0, z);
     scene.add(kuleGrup);
 
-    // Sayısal yazı için HTML DOM elementi oluşturma
     const canYazisi = document.createElement('div');
     canYazisi.className = 'kule-can-yazisi';
     canYazisi.innerText = maxCan + " / " + maxCan;
@@ -162,7 +161,7 @@ function iksirDoldur() {
     if (botIksir < maxIksir) botIksir += 0.025;
 }
 
-// --- SINIRLARI DİNAMİK GÖSTERME FONKSİYONU ---
+// --- SINIRLARI GÖRSEL OLARAK HİZALAMA VE DÜZELTME ---
 function kartSec(kartAdi, maliyet) {
     document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
     
@@ -171,18 +170,29 @@ function kartSec(kartAdi, maliyet) {
         seciliKartMaliyet = maliyet;
         document.getElementById('card-' + kartAdi).classList.add('active');
         
-        // Sınır Alanını Güncelle ve Göster
-        // Eğer iki kule de yıkılmadıysa sadece kendi sahamız parlar
+        sinirIzgarasi.geometry.dispose();
+
+        // Görsel Hata Çözümü: Eğer iki kule de duruyorsa sınır sadece kendi sahamız (Z: 0.5 ile 9)
         if (!botSolKuleYikildi && !botSagKuleYikildi) {
-            sinirIzgarasi.geometry.dispose();
-            sinirIzgarasi.geometry = new THREE.PlaneGeometry(12, 8.5); // Standart saha boyutu
-            sinirIzgarasi.position.set(0, 0.06, 4.75);
-        } else {
-            // Eğer herhangi bir düşman yan kulesi yıkıldıysa sınır nehrin üstüne (karşı sahaya) uzar
-            sinirIzgarasi.geometry.dispose();
-            sinirIzgarasi.geometry = new THREE.PlaneGeometry(12, 13); // Genişletilmiş saha boyutu
+            sinirIzgarasi.geometry = new THREE.PlaneGeometry(12, 8.5);
+            sinirIzgarasi.position.set(0, 0.06, 4.75); 
+        } 
+        // Eğer sol kule yıkıldı ama sağ kule duruyorsa, sadece sol taraf nehrin ötesine uzanır
+        else if (botSolKuleYikildi && !botSagKuleYikildi) {
+            sinirIzgarasi.geometry = new THREE.PlaneGeometry(12, 13);
+            sinirIzgarasi.position.set(-2, 0.06, 2.5); // Sola doğru hafif kaydırarak gerçek alanı gösteriyoruz
+        } 
+        // Eğer sağ kule yıkıldı ama sol duruyorsa
+        else if (!botSolKuleYikildi && botSagKuleYikildi) {
+            sinirIzgarasi.geometry = new THREE.PlaneGeometry(12, 13);
+            sinirIzgarasi.position.set(2, 0.06, 2.5); // Sağa doğru kaydırıyoruz
+        } 
+        // İki kule de yıkıldıysa full uzatabiliriz
+        else {
+            sinirIzgarasi.geometry = new THREE.PlaneGeometry(12, 13);
             sinirIzgarasi.position.set(0, 0.06, 2.5);
         }
+        
         sinirIzgarasi.visible = true;
     }
 }
@@ -248,6 +258,7 @@ window.addEventListener('pointerdown', (e) => {
     if (intersects.length > 0) {
         const nokta = intersects[0].point;
         
+        // Mantıksal Bırakma Sınırı Kontrolü
         let gecerliSinirZ = 0.5; 
         if (nokta.x < 0 && botSolKuleYikildi) gecerliSinirZ = -4;
         if (nokta.x > 0 && botSagKuleYikildi) gecerliSinirZ = -4;
@@ -281,14 +292,18 @@ function kuleCanlariniGuncelle() {
             return;
         }
         
-        // 3D Kule koordinatlarını 2D ekran koordinatlarına çevirme mekanizması
         const wp = new THREE.Vector3();
         kule.getWorldPosition(wp);
-        wp.y += 2.8; // Yazıyı can barının hemen üstüne taşımak için
+        wp.y += 2.8; 
         wp.project(camera);
 
         const x = (wp.x * .5 + .5) * window.innerWidth;
-        const y = (-(wp.y * .5) + .5) * window.innerHeight;
+        let y = (-(wp.y * .5) + .5) * window.innerHeight;
+
+        // UI Çakışma Düzeltmesi: Oyuncu kulelerinin yazılarını barın arkasına kaçmasın diye biraz yukarı çekiyoruz
+        if (kule.userData.taraf === 'oyuncu') {
+            y -= 12; 
+        }
 
         kule.userData.canYazisi.style.left = `${x}px`;
         kule.userData.canYazisi.style.top = `${y}px`;
@@ -312,46 +327,46 @@ function animate() {
 
         askerler.forEach(asker => {
             if (!asker.userData.canli) return;
-            let hedefNesne = null; let enYakinMesafe = 999;
+            let hedon = null; let enYakinMesafe = 999;
 
             if (asker.userData.tip !== 'Dev') {
                 askerler.forEach(rakip => {
                     if (rakip.userData.canli && rakip.userData.taraf !== asker.userData.taraf) {
                         let d = asker.position.distanceTo(rakip.position);
-                        if (d < enYakinMesafe && d < 3.5) { enYakinMesafe = d; hedefNesne = rakip; }
+                        if (d < enYakinMesafe && d < 3.5) { enYakinMesafe = d; hedon = rakip; }
                     }
                 });
             }
 
-            if (!hedefNesne) {
+            if (!hedon) {
                 kuleler.forEach(kule => {
                     if (kule.userData.canli && kule.userData.taraf !== asker.userData.taraf) {
                         let d = asker.position.distanceTo(kule.position);
-                        if (d < enYakinMesafe) { enYakinMesafe = d; hedefNesne = kule; }
+                        if (d < enYakinMesafe) { enYakinMesafe = d; hedon = kule; }
                     }
                 });
             }
 
-            if (hedefNesne) {
+            if (hedon) {
                 if (enYakinMesafe < 1.1) {
-                    hedefNesne.userData.can -= asker.userData.hasar;
-                    let oran = hedefNesne.userData.can / hedefNesne.userData.maxCan;
-                    hedefNesne.userData.barCan.scale.x = Math.max(0, oran);
+                    hedon.userData.can -= asker.userData.hasar;
+                    let oran = hedon.userData.can / hedon.userData.maxCan;
+                    hedon.userData.barCan.scale.x = Math.max(0, oran);
 
-                    if (hedefNesne.userData.can <= 0) {
-                        hedefNesne.userData.canli = false;
-                        if (hedefNesne.userData.tip === 'ana') {
-                            macBitir(hedefNesne.userData.taraf === 'bot' ? 'kazandin' : 'kaybettin');
-                        } else if (hedefNesne.userData.taraf === 'bot') {
-                            if (hedefNesne.userData.tip === 'sol') botSolKuleYikildi = true;
-                            if (hedefNesne.userData.tip === 'sag') botSagKuleYikildi = true;
-                            scene.remove(hedefNesne);
-                        } else { scene.remove(hedefNesne); }
+                    if (hedon.userData.can <= 0) {
+                        hedon.userData.canli = false;
+                        if (hedon.userData.tip === 'ana') {
+                            macBitir(hedon.userData.taraf === 'bot' ? 'kazandin' : 'kaybettin');
+                        } else if (hedon.userData.taraf === 'bot') {
+                            if (hedon.userData.tip === 'sol') botSolKuleYikildi = true;
+                            if (hedon.userData.tip === 'sag') botSagKuleYikildi = true;
+                            scene.remove(hedon);
+                        } else { scene.remove(hedon); }
                     }
                     return;
                 }
 
-                let hX = hedefNesne.position.x; let hZ = hedefNesne.position.z;
+                let hX = hedon.position.x; let hZ = hedon.position.z;
                 if (!asker.userData.gecitKopru && ((asker.userData.taraf === 'oyuncu' && asker.position.z > 0) || (asker.userData.taraf === 'bot' && asker.position.z < 0))) {
                     hX = asker.userData.kopruHedef.x; hZ = asker.userData.kopruHedef.z;
                     if (Math.abs(asker.position.z - hZ) < 0.4) asker.userData.gecitKopru = true;
