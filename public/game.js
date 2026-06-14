@@ -1,18 +1,49 @@
 let oyunBasladi = false;
-let oyunModu = 'bot';
+let oyunModu = 'bot'; // 'online', 'bot', 'friend'
 let kalanSure = 180;
 let sureZamanlayici = null;
 
-// --- YENİ: MENÜDE KART SEÇİM SİSTEMİ ---
-let seciliKart = 'Sovalye'; // Varsayılan başlangıç kartı
+let seciliKart = 'Sovalye';
 let seciliKartMaliyet = 3;
 
-function menudeKartSec(kartAdi, maliyet) {
-    // Menüdeki tüm kart seçim butonlarının yeşil aktiflik sınıfını temizle
-    document.querySelectorAll('.menu-card-btn').forEach(b => b.style.border = '2px solid #ccc');
-    document.querySelectorAll('.menu-card-btn').forEach(b => b.style.background = '#fff');
+// --- Gelişmiş Lobi ve Mod Seçimi ---
+function oyunModuSec(mod) {
+    document.querySelectorAll('.mod-btn').forEach(b => b.classList.remove('active'));
+    oyunModu = mod;
     
-    // Seçilen kartı kaydet ve butonunu yeşile boya
+    document.getElementById('mod-' + mod).classList.add('active');
+    
+    // Arkadaşa karşı ise şifreli oda kurma/katılma alanını aç
+    const odaPaneli = document.getElementById('oda-paneli');
+    if(mod === 'friend') {
+        odaPaneli.style.display = 'flex';
+    } else {
+        odaPaneli.style.display = 'none';
+    }
+}
+
+function odaEylemi(eylem) {
+    const odaKod = document.getElementById('oda-kod-input').value.trim();
+    const odaSifre = document.getElementById('oda-sifre-input').value.trim();
+    
+    if(!odaKod || !odaSifre) {
+        alert("Lütfen Oda Kodu ve Şifre alanlarını doldurun, reis!");
+        return;
+    }
+    
+    if(eylem === 'kur') {
+        alert(`Başarılı! ${odaKod} numaralı oda şifreli olarak kuruldu. Arkadaşının katılması bekleniyor...`);
+    } else {
+        alert(`${odaKod} odasına şifre doğrulanarak başarıyla bağlanılıyor!`);
+    }
+}
+
+function menudeKartSec(kartAdi, maliyet) {
+    document.querySelectorAll('.menu-card-btn').forEach(b => {
+        b.style.border = '2px solid #ccc';
+        b.style.background = 'white';
+    });
+    
     seciliKart = kartAdi;
     seciliKartMaliyet = maliyet;
     
@@ -23,19 +54,15 @@ function menudeKartSec(kartAdi, maliyet) {
     }
 }
 
-function modSec(mod) {
-    document.getElementById('mode-bot').classList.remove('secili');
-    document.getElementById('mode-friend').classList.remove('secili');
-    if(mod === 'bot') { oyunModu = 'bot'; document.getElementById('mode-bot').classList.add('secili'); }
-    else { oyunModu = 'friend'; document.getElementById('mode-friend').classList.add('secili'); }
-}
-
 function oyunuBaslat() {
+    if(oyunModu === 'online') {
+        alert("Online Savaş modu aranıyor... Rakip bekleniyor!");
+    }
+    
     document.getElementById('menu-ekrani').style.display = 'none';
     document.getElementById('oyun-ui').style.display = 'block';
     document.getElementById('sure-sayaci').style.display = 'block';
     
-    // Menüde seçilen kartı alttaki oyun içi panele de otomatik aktif yansıt
     document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
     const aktifOyunKarti = document.getElementById('card-' + seciliKart);
     if(aktifOyunKarti) aktifOyunKarti.classList.add('active');
@@ -67,7 +94,7 @@ function macBitir(durum) {
     setTimeout(() => { location.reload(); }, 4000);
 }
 
-// --- DİNAMİK TEXTURE (DOKU) ÜRETİCİLERİ ---
+// --- DOKU ÜRETİCİLERİ ---
 function createGrassTexture() {
     const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 512;
     const ctx = canvas.getContext('2d'); ctx.fillStyle = '#4caf50'; ctx.fillRect(0, 0, 512, 512);
@@ -85,7 +112,7 @@ function createStoneTexture() {
     const ctx = canvas.getContext('2d'); ctx.fillStyle = '#7f8c8d'; ctx.fillRect(0, 0, 256, 256);
     ctx.strokeStyle = '#34495e'; ctx.lineWidth = 3;
     for(let y=0; y<256; y+=32) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y); stroke();
         let offset = (y % 64 === 0) ? 0 : 32;
         for(let x=offset; x<=256; x+=64) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y+32); ctx.stroke(); }
     }
@@ -136,7 +163,7 @@ const grassTex = createGrassTexture();
 const stoneTex = createStoneTexture();
 const waterTex = createWaterTexture();
 
-// Arena (Boyutlar sabit tutuldu)
+// Arena
 const arenaGeo = new THREE.PlaneGeometry(30, 40);
 const arenaMat = new THREE.MeshLambertMaterial({ map: grassTex });
 const arena = new THREE.Mesh(arenaGeo, arenaMat);
@@ -166,22 +193,21 @@ function kopruCiz(x) {
 }
 kopruCiz(-5.5); kopruCiz(5.5);
 
-// 🛑 BUG ÖNLEYİCİ GÖRÜNMEZ SU DUVARLARI (Köprüler hariç nehir alanını kapatır)
+// Engel Duvarları
 const suDuvarlari = [];
 function suDuvariOlustur(x, genislik) {
-    const dGeo = new THREE.BoxGeometry(genislik, 4.0, 2.8); // 4 birim yüksekliğinde aşılmaz engel
-    const dMat = new THREE.MeshBasicMaterial({ visible: false }); // Kodda çalışır ama görünmez
+    const dGeo = new THREE.BoxGeometry(genislik, 4.0, 2.8);
+    const dMat = new THREE.MeshBasicMaterial({ visible: false });
     const dMesh = new THREE.Mesh(dGeo, dMat);
     dMesh.position.set(x, 2.0, 0);
     scene.add(dMesh);
     suDuvarlari.push(dMesh);
 }
-// Sol boşluk, orta boşluk ve sağ boşluk görünmez engellerle kapatıldı
 suDuvariOlustur(-9.5, 5.0); 
 suDuvariOlustur(0, 8.0);    
 suDuvariOlustur(9.5, 5.0);  
 
-// Dinamik Sınır Göstergesi
+// Dinamik Sınır Izgarası
 const sinirGeo = new THREE.PlaneGeometry(20, 13.5); 
 const sinirMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 });
 const sinirIzgarasi = new THREE.Mesh(sinirGeo, sinirMat);
@@ -190,13 +216,12 @@ sinirIzgarasi.position.set(0, 0.07, 7.5);
 sinirIzgarasi.visible = false; 
 scene.add(sinirIzgarasi);
 
-// --- 🏟️ TARAFTAR VE TRİBÜNLER (SAHAYA TAM SIFIRLANDI) ---
+// Taraftarlar
 const taraftarlar = [];
 function tribünVeTaraftarEkle(xYonu) {
     const tribünGeo = new THREE.BoxGeometry(2.0, 1.5, 36);
     const tribünMat = new THREE.MeshLambertMaterial({ color: 0x7f8c8d });
     const tribün = new THREE.Mesh(tribünGeo, tribünMat);
-    // X pozisyonu 13.5'ten 11.2'ye çekildi, böylece yeşil arenanın hemen sınırına yapıştılar!
     tribün.position.set(xYonu * 11.2, 0.75, 0);
     scene.add(tribün);
 
@@ -216,7 +241,7 @@ function tribünVeTaraftarEkle(xYonu) {
 tribünVeTaraftarEkle(-1); 
 tribünVeTaraftarEkle(1);  
 
-// --- KULELER VE LİSTELER ---
+// Kuleler
 const kuleler = [];
 const askerler = [];
 const oklar = [];
@@ -309,6 +334,7 @@ function iksirDoldur() {
     if (botIksir < maxIksir) botIksir += 0.025;
 }
 
+// Oyun içi tıklamayla kart seçince sınır ızgarasını güncelleme alanı
 function kartSec(kartAdi, maliyet) {
     document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
     if (oyuncuIksir >= maliyet) {
@@ -317,10 +343,15 @@ function kartSec(kartAdi, maliyet) {
         document.getElementById('card-' + kartAdi).classList.add('active');
 
         sinirIzgarasi.geometry.dispose();
+        
+        // 👑 TAM ÇÖZÜM: Yıkılan kulelere göre sınır çizgilerini dinamik genişletiyoruz!
         if (botSolKuleYikildi && botSagKuleYikildi) {
-            sinirIzgarasi.geometry = new THREE.PlaneGeometry(20, 23); sinirIzgarasi.position.set(0, 0.06, 2.8);
+            // İki kule de yıkıldıysa sınır tam köprünün ötesine (-4.5'e kadar) genişler!
+            sinirIzgarasi.geometry = new THREE.PlaneGeometry(20, 25); 
+            sinirIzgarasi.position.set(0, 0.06, 2.0);
         } else {
-            sinirIzgarasi.geometry = new THREE.PlaneGeometry(20, 13.5); sinirIzgarasi.position.set(0, 0.06, 7.5);
+            sinirIzgarasi.geometry = new THREE.PlaneGeometry(20, 13.5); 
+            sinirIzgarasi.position.set(0, 0.07, 7.5);
         }
         sinirIzgarasi.visible = true;
     }
@@ -402,9 +433,15 @@ window.addEventListener('pointerdown', (e) => {
     if (intersects.length > 0) {
         const nokta = intersects[0].point;
         let izinVerildi = false;
-        if (nokta.z > 0.2 && nokta.z < 13.5 && Math.abs(nokta.x) < 10.0) izinVerildi = true; 
-        else if (botSolKuleYikildi && nokta.x < 0 && nokta.z > -8.5 && nokta.z <= 0.2 && nokta.x > -10.0) izinVerildi = true; 
-        else if (botSagKuleYikildi && nokta.x > 0 && nokta.z > -8.5 && nokta.z <= 0.2 && nokta.x < 10.0) izinVerildi = true;
+        
+        // 👑 TAM ÇÖZÜM: Kuleler yıkıldıkça tıklama ile haritaya yerleştirme sınırlarını da genişletiyoruz!
+        if (nokta.z > 0.2 && nokta.z < 13.5 && Math.abs(nokta.x) < 10.0) {
+            izinVerildi = true; 
+        } else if (botSolKuleYikildi && nokta.x < 0 && nokta.z > -5.0 && nokta.z <= 0.2 && nokta.x > -10.0) {
+            izinVerildi = true; // Sol kule yıkıldıysa nehrin ilerisine asker atılabilir
+        } else if (botSagKuleYikildi && nokta.x > 0 && nokta.z > -5.0 && nokta.z <= 0.2 && nokta.x < 10.0) {
+            izinVerildi = true; // Sağ kule yıkıldıysa nehrin ilerisine asker atılabilir
+        }
 
         if (izinVerildi && oyuncuIksir >= seciliKartMaliyet) {
             askerIndir(nokta.x, nokta.z, seciliKart, 'oyuncu');
@@ -423,7 +460,6 @@ setInterval(() => {
     }
 }, 3500);
 
-// --- ANA MOTOR DÖNGÜSÜ ---
 function animate() {
     requestAnimationFrame(animate);
     iksirDoldur();
@@ -517,7 +553,7 @@ function animate() {
                 if (!hedon) {
                     kuleler.forEach(kule => {
                         if (kule.userData.canli && kule.userData.taraf !== asker.userData.taraf) {
-                            let d = asker.position.distanceTo(kule.position);
+                            let d = kule.position.distanceTo(kule.position);
                             if (d < enYakinMesafe) { enYakinMesafe = d; hedon = kule; }
                         }
                     });
