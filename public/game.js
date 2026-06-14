@@ -3,6 +3,26 @@ let oyunModu = 'bot';
 let kalanSure = 180;
 let sureZamanlayici = null;
 
+// --- YENİ: MENÜDE KART SEÇİM SİSTEMİ ---
+let seciliKart = 'Sovalye'; // Varsayılan başlangıç kartı
+let seciliKartMaliyet = 3;
+
+function menudeKartSec(kartAdi, maliyet) {
+    // Menüdeki tüm kart seçim butonlarının yeşil aktiflik sınıfını temizle
+    document.querySelectorAll('.menu-card-btn').forEach(b => b.style.border = '2px solid #ccc');
+    document.querySelectorAll('.menu-card-btn').forEach(b => b.style.background = '#fff');
+    
+    // Seçilen kartı kaydet ve butonunu yeşile boya
+    seciliKart = kartAdi;
+    seciliKartMaliyet = maliyet;
+    
+    const aktifButon = document.getElementById('menu-btn-' + kartAdi);
+    if(aktifButon) {
+        aktifButon.style.border = '3px solid #2ecc71';
+        aktifButon.style.background = '#e8f8f5';
+    }
+}
+
 function modSec(mod) {
     document.getElementById('mode-bot').classList.remove('secili');
     document.getElementById('mode-friend').classList.remove('secili');
@@ -14,6 +34,12 @@ function oyunuBaslat() {
     document.getElementById('menu-ekrani').style.display = 'none';
     document.getElementById('oyun-ui').style.display = 'block';
     document.getElementById('sure-sayaci').style.display = 'block';
+    
+    // Menüde seçilen kartı alttaki oyun içi panele de otomatik aktif yansıt
+    document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+    const aktifOyunKarti = document.getElementById('card-' + seciliKart);
+    if(aktifOyunKarti) aktifOyunKarti.classList.add('active');
+    
     oyunBasladi = true;
     kalanSure = 180;
     sureyiBaslat();
@@ -74,18 +100,16 @@ function createWaterTexture() {
     return new THREE.CanvasTexture(canvas);
 }
 
-// 🎭 ASKER DOKULARI (Zırh, Kumaş, Deri detayları)
 function createAskerTexture(anaRenk, tip) {
     const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128;
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = anaRenk; ctx.fillRect(0, 0, 128, 128);
-    
     ctx.fillStyle = 'rgba(0,0,0,0.15)';
-    if (tip === 'Dev') { // Dev için kemer ve kıyafet çizgileri
+    if (tip === 'Dev') {
         ctx.fillRect(0, 50, 128, 25); ctx.fillStyle = '#d35400'; ctx.fillRect(50, 45, 28, 35);
-    } else if (tip === 'Okcu') { // Okçu için çapraz ok kılıfı askısı
+    } else if (tip === 'Okcu') {
         ctx.lineWidth = 12; ctx.strokeStyle = '#5c3d2e'; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(128,128); ctx.stroke();
-    } else { // Şövalye için çelik plaka zırh çizgileri
+    } else {
         ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(64,0); ctx.lineTo(64,128); ctx.stroke();
     }
     return new THREE.CanvasTexture(canvas);
@@ -112,7 +136,7 @@ const grassTex = createGrassTexture();
 const stoneTex = createStoneTexture();
 const waterTex = createWaterTexture();
 
-// Arena
+// Arena (Boyutlar sabit tutuldu)
 const arenaGeo = new THREE.PlaneGeometry(30, 40);
 const arenaMat = new THREE.MeshLambertMaterial({ map: grassTex });
 const arena = new THREE.Mesh(arenaGeo, arenaMat);
@@ -125,7 +149,7 @@ const ground = new THREE.Mesh(groundGeo, groundMat);
 ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
 
-// Nehir ve Köprüler
+// Nehir
 const riverGeo = new THREE.BoxGeometry(24, 0.1, 3.0);
 const riverMat = new THREE.MeshLambertMaterial({ map: waterTex });
 const river = new THREE.Mesh(riverGeo, riverMat);
@@ -142,6 +166,21 @@ function kopruCiz(x) {
 }
 kopruCiz(-5.5); kopruCiz(5.5);
 
+// 🛑 BUG ÖNLEYİCİ GÖRÜNMEZ SU DUVARLARI (Köprüler hariç nehir alanını kapatır)
+const suDuvarlari = [];
+function suDuvariOlustur(x, genislik) {
+    const dGeo = new THREE.BoxGeometry(genislik, 4.0, 2.8); // 4 birim yüksekliğinde aşılmaz engel
+    const dMat = new THREE.MeshBasicMaterial({ visible: false }); // Kodda çalışır ama görünmez
+    const dMesh = new THREE.Mesh(dGeo, dMat);
+    dMesh.position.set(x, 2.0, 0);
+    scene.add(dMesh);
+    suDuvarlari.push(dMesh);
+}
+// Sol boşluk, orta boşluk ve sağ boşluk görünmez engellerle kapatıldı
+suDuvariOlustur(-9.5, 5.0); 
+suDuvariOlustur(0, 8.0);    
+suDuvariOlustur(9.5, 5.0);  
+
 // Dinamik Sınır Göstergesi
 const sinirGeo = new THREE.PlaneGeometry(20, 13.5); 
 const sinirMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 });
@@ -151,31 +190,31 @@ sinirIzgarasi.position.set(0, 0.07, 7.5);
 sinirIzgarasi.visible = false; 
 scene.add(sinirIzgarasi);
 
-// --- 🏟️ TARAFTAR Tribünleri EKLEME ---
+// --- 🏟️ TARAFTAR VE TRİBÜNLER (SAHAYA TAM SIFIRLANDI) ---
 const taraftarlar = [];
 function tribünVeTaraftarEkle(xYonu) {
-    const tribünGeo = new THREE.BoxGeometry(2.5, 1.5, 36);
+    const tribünGeo = new THREE.BoxGeometry(2.0, 1.5, 36);
     const tribünMat = new THREE.MeshLambertMaterial({ color: 0x7f8c8d });
     const tribün = new THREE.Mesh(tribünGeo, tribünMat);
-    tribün.position.set(xYonu * 13.5, 0.75, 0);
+    // X pozisyonu 13.5'ten 11.2'ye çekildi, böylece yeşil arenanın hemen sınırına yapıştılar!
+    tribün.position.set(xYonu * 11.2, 0.75, 0);
     scene.add(tribün);
 
-    // Tribün üzerine küçük taraftar blokları yerleştirme
     const renkler = [0xe74c3c, 0x3498db, 0xf1c40f, 0x9b59b6, 0xffffff];
-    for (let z = -17; z <= 17; z += 2.2) {
+    for (let z = -17; z <= 17; z += 2.0) {
         const tGrup = new THREE.Group();
         const tMat = new THREE.MeshLambertMaterial({ color: renkler[Math.floor(Math.random() * renkler.length)] });
         
-        const gövde = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.6), tMat); gövde.position.y = 0.4; tGrup.add(gövde);
-        const kafa = new THREE.Mesh(new THREE.SphereGeometry(0.22, 6, 6), new THREE.MeshLambertMaterial({ color: 0xffdbac })); kafa.position.y = 0.9; tGrup.add(kafa);
+        const gövde = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.8, 0.55), tMat); gövde.position.y = 0.4; tGrup.add(gövde);
+        const kafa = new THREE.Mesh(new THREE.SphereGeometry(0.2, 6, 6), new THREE.MeshLambertMaterial({ color: 0xffdbac })); kafa.position.y = 0.9; tGrup.add(kafa);
         
-        tGrup.position.set(xYonu * 13.5, 1.5, z);
+        tGrup.position.set(xYonu * 11.2, 1.5, z);
         scene.add(tGrup);
-        taraftarlar.push({ mesh: tGrup, hiz: 0.1 + Math.random() * 0.15, offset: Math.random() * 10 });
+        taraftarlar.push({ mesh: tGrup, hiz: 0.12 + Math.random() * 0.18, offset: Math.random() * 10 });
     }
 }
-tribünVeTaraftarEkle(-1); // Sol tribün
-tribünVeTaraftarEkle(1);  // Sağ tribün
+tribünVeTaraftarEkle(-1); 
+tribünVeTaraftarEkle(1);  
 
 // --- KULELER VE LİSTELER ---
 const kuleler = [];
@@ -225,7 +264,6 @@ function kuleOlustur(x, z, maxCan, taraf, tip) {
     const koruyucuTip = (tip === 'ana' ? 'kral' : 'okcu');
     const koruyucuFigur = kuleKoruyucuEkle(taraf === 'oyuncu' ? OYUNCU_ANA : BOT_ANA, koruyucuTip, kuleGrup, taraf);
 
-    // Kule Can barları grubu (Billboard dönüşü için ayrı grup yapıldı)
     const uiGrup = new THREE.Group();
     uiGrup.position.set(0, 3.6, 0);
 
@@ -260,7 +298,6 @@ kuleOlustur(5.5, -8.5, 800, 'bot', 'sag');
 kuleOlustur(0, -10.5, 1600, 'bot', 'ana');
 
 let oyuncuIksir = 0; let botIksir = 0; const maxIksir = 10;
-let seciliKart = null; let seciliKartMaliyet = 0;
 
 function iksirDoldur() {
     if (!oyunBasladi) return;
@@ -302,7 +339,6 @@ function okFirlat(baslangicPos, healerNesne, hasar) {
     oklar.push({ mesh: okMesh, hedef: healerNesne, hasar: hasar, hiz: 0.38 });
 }
 
-// --- 🟢 DOKULU ASKER VE KAMERAYA DÖNEN KUSURSUZ CAN BARI ---
 function askerIndir(x, z, kartAdi, taraf) {
     const askerGrup = new THREE.Group();
     let geo, hız, hasar, maxCan, menzil;
@@ -317,8 +353,6 @@ function askerIndir(x, z, kartAdi, taraf) {
 
     const anaRenk = (taraf === 'oyuncu' ? OYUNCU_ANA : BOT_ANA);
     const matDetay = new THREE.MeshLambertMaterial({ color: (taraf === 'oyuncu' ? OYUNCU_DETAY : BOT_DETAY) });
-    
-    // 🎨 Canlı Canvas Dokusunu Giydirme
     const matDoku = new THREE.MeshLambertMaterial({ map: createAskerTexture(anaRenk, kartAdi) });
 
     const govde = new THREE.Mesh(geo, matDoku);
@@ -334,7 +368,6 @@ function askerIndir(x, z, kartAdi, taraf) {
     const bacakSag = bacakSol.clone(); bacakSag.position.x = 0.25;
     askerGrup.add(bacakSol); askerGrup.add(bacakSag);
 
-    // 🎯 Billboard Can Barı Sistemi (Yatay grup)
     const uiGrup = new THREE.Group();
     uiGrup.position.set(0, 2.4, 0);
 
@@ -358,7 +391,6 @@ function askerIndir(x, z, kartAdi, taraf) {
     askerler.push(askerGrup);
 }
 
-// Dokunma Tıklama Algılayıcıları
 const raycaster = new THREE.Raycaster(); const mouse = new THREE.Vector2();
 window.addEventListener('pointerdown', (e) => {
     if (!oyunBasladi || !seciliKart) return;
@@ -381,7 +413,6 @@ window.addEventListener('pointerdown', (e) => {
     }
 });
 
-// Bot Mekaniği
 setInterval(() => {
     if (!oyunBasladi || oyunModu !== 'bot') return;
     const kartlar = ['Sovalye', 'Okcu', 'Dev']; const maliyetler = [3, 2, 5];
@@ -397,18 +428,16 @@ function animate() {
     requestAnimationFrame(animate);
     iksirDoldur();
     
-    // 🏟️ Taraftarları Zıplatma Dünyası
     taraftarlar.forEach(t => {
         t.mesh.position.y = 1.5 + Math.abs(Math.sin(Date.now() * 0.004 * t.hiz + t.offset)) * 0.4;
     });
 
     if (oyunBasladi) {
-        // 🎯 KULE CAN BARLARINI KAMERAYA SABİTLEME (Mükemmel Görüntü)
         kuleler.forEach(k => {
             if (k.userData.canli && k.userData.uiGrup) {
                 let oran = k.userData.can / k.userData.maxCan;
                 k.userData.barCan.scale.x = Math.max(0.001, oran);
-                k.userData.uiGrup.lookAt(camera.position); // Kamerayı takip et!
+                k.userData.uiGrup.lookAt(camera.position);
             }
         });
 
@@ -416,14 +445,12 @@ function animate() {
             if (!askerler[i].userData.canli) { scene.remove(askerler[i]); askerler.splice(i, 1); }
         }
 
-        // 🎯 ASKER CAN BARLARINI KAMERAYA SABİTLEME (Dönüşü kaldırıldı, direkt bakıyor)
         askerler.forEach(asker => {
             if (asker.userData.canli && asker.userData.uiGrup) {
-                asker.userData.uiGrup.lookAt(camera.position); // Can barı tam oyuncuya bakar!
+                asker.userData.uiGrup.lookAt(camera.position);
             }
         });
 
-        // Okların Hareketi
         for (let i = oklar.length - 1; i >= 0; i--) {
             let ok = oklar[i];
             if (!ok.hedef.userData.canli) { scene.remove(ok.mesh); oklar.splice(i, 1); continue; }
@@ -452,7 +479,6 @@ function animate() {
             }
         }
 
-        // Kule Saldırı Algoritması
         kuleler.forEach(kule => {
             if (!kule.userData.canli) return;
             let hedon = null; let enYakinMesafe = 999;
@@ -470,7 +496,6 @@ function animate() {
             }
         });
 
-        // Askerlerin Yapay Zeka Hareketi ve Savaşları
         askerler.forEach(asker => {
             if (!asker.userData.canli) return;
             let hedon = null; let enYakinMesafe = 999;
