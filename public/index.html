@@ -2,117 +2,102 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Here Wars</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hero Wars ⚔️</title>
     <style>
-        * { box-sizing: border-box; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: 'Arial', sans-serif; background: #222; user-select: none; }
-        
-        @media screen and (orientation: landscape) {
-            body::after {
-                content: "Lütfen telefonunuzu dik tutun!";
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: #222; color: white; z-index: 9999;
-                display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold;
-            }
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #27ae60;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
-        /* GİRİŞ MENÜSÜ */
-        #menu-ekrani {
-            position: absolute; width: 100%; height: 100%;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 100; color: white; padding: 20px;
-        }
-        #menu-ekrani h1 { font-size: 46px; margin-bottom: 20px; text-shadow: 2px 4px 10px rgba(0,0,0,0.5); font-style: italic; font-weight: 900; letter-spacing: 2px; }
-        
-        .secenek-grubu { display: flex; flex-direction: column; gap: 15px; margin-bottom: 40px; width: 80%; max-width: 250px; }
-        .secenek-btn {
-            padding: 15px; background: rgba(0,0,0,0.4); border: 3px solid rgba(255,255,255,0.4); border-radius: 15px;
-            color: white; font-weight: bold; cursor: pointer; font-size: 16px; text-align: center; transition: 0.2s;
-        }
-        .secenek-btn.secili { background: #00bcd4; border-color: #fff; transform: scale(1.05); box-shadow: 0 0 15px #00bcd4; }
-
-        #basla-btn {
-            padding: 18px 60px; background: #ffcc00; border: none; border-radius: 20px;
-            font-size: 26px; font-weight: bold; color: #333; cursor: pointer;
-            box-shadow: 0 6px 0 #cc9900, 0 10px 20px rgba(0,0,0,0.4); transition: 0.1s;
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
         }
 
-        /* SÜRE SAYACI */
-        #sure-sayaci {
-            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.6); color: white; padding: 8px 20px;
-            border-radius: 20px; font-size: 20px; font-weight: bold; z-index: 50;
-            border: 2px solid #fff; display: none; text-shadow: 1px 1px 2px #000;
+        /* 👑 SEÇİLİ KART SINIFI (MENÜ VE OYUN İÇİ İÇİN) */
+        .secili {
+            background: #2ecc71 !important;
+            color: white !important;
+            border: 2px solid #27ae60 !important;
         }
 
-        /* MAÇ SONU EKRANI */
-        #mac-sonu-ekrani {
-            position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.85);
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 200; color: white; font-size: 40px; font-weight: bold; text-align: center;
+        .card.active {
+            border: 3px solid #f1c40f !important;
+            background: #f39c12 !important;
+            transform: translateY(-10px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
         }
-
-        /* KULE CANLARI */
-        .kule-can-yazisi {
-            position: absolute; color: white; font-weight: bold; font-size: 11px;
-            background: rgba(0, 0, 0, 0.7); padding: 2px 6px; border-radius: 4px;
-            pointer-events: none; transform: translate(-50%, -50%);
-            white-space: nowrap; border: 1px solid rgba(255,255,255,0.2);
-            z-index: 10; font-family: monospace;
-        }
-
-        /* OYUN UI */
-        #oyun-ui { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; pointer-events: none; }
-        #alt-panel {
-            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
-            display: flex; flex-direction: column; align-items: center; gap: 8px;
-            width: 100%; max-width: 360px; padding: 0 10px; pointer-events: auto;
-        }
-        #iksir-bar { width: 90%; height: 18px; background: #333; border: 2px solid #fff; border-radius: 9px; overflow: hidden; position: relative; }
-        #iksir-doluluk { width: 0%; height: 100%; background: #e000e0; transition: width 0.1s linear; }
-        #iksir-metin { position: absolute; width: 100%; text-align: center; color: white; font-weight: bold; font-size: 12px; line-height: 14px; text-shadow: 1px 1px 2px #000; }
-        
-        #ui { display: flex; gap: 10px; width: 100%; justify-content: center; }
-        .card {
-            width: 75px; height: 95px; background: #f5f5f5; border: 3px solid #333; border-radius: 12px;
-            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-            padding: 8px 0; font-weight: bold; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.4); font-size: 13px;
-        }
-        .card.active { border-color: #ffcc00; background: #fffde6; transform: translateY(-8px); box-shadow: 0 8px 12px rgba(255,204,0,0.4); }
-        .card span:last-child { color: #d500f9; font-size: 12px; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-    <div id="menu-ekrani">
-        <h1>HERE WARS</h1>
-        <div class="secenek-grubu">
-            <div class="secenek-btn secili" id="mode-bot" onclick="modSec('bot')">🤖 Bota Karşı</div>
-            <div class="secenek-btn" id="mode-friend" onclick="modSec('friend')">👥 Arkadaşla (Yakında)</div>
+    <div id="menu-ekrani" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(44, 62, 80, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; color: white; text-align: center;">
+        <h1 style="margin-bottom: 5px; font-size: 42px; text-shadow: 3px 3px #000; letter-spacing: 2px;">HERO WARS ⚔️</h1>
+        <p style="color: #bdc3c7; margin-bottom: 25px; font-size: 16px;">Savaşçı Desteni Seç ve Arenaya Atıl!</p>
+        
+        <div style="display: flex; gap: 15px; margin-bottom: 30px; background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
+            <button id="menu-btn-Sovalye" class="menu-card-btn" onclick="menudeKartSec('Sovalye', 3)" style="width: 85px; height: 120px; border-radius: 8px; border: 3px solid #2ecc71; background: #e8f8f5; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: space-around; font-weight: bold; font-size: 12px; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+                <span>Şövalye</span>
+                <span style="font-size:24px;">🛡️</span>
+                <span style="color:#2980b9;">💧 3</span>
+            </button>
+            <button id="menu-btn-Okcu" class="menu-card-btn" onclick="menudeKartSec('Okcu', 2)" style="width: 85px; height: 120px; border-radius: 8px; border: 2px solid #ccc; background: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: space-around; font-weight: bold; font-size: 12px; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+                <span>Okçu</span>
+                <span style="font-size:24px;">🏹</span>
+                <span style="color:#2980b9;">💧 2</span>
+            </button>
+            <button id="menu-btn-Dev" class="menu-card-btn" onclick="menudeKartSec('Dev', 5)" style="width: 85px; height: 120px; border-radius: 8px; border: 2px solid #ccc; background: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: space-around; font-weight: bold; font-size: 12px; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+                <span>Dev</span>
+                <span style="font-size:24px;">👹</span>
+                <span style="color:#2980b9;">💧 5</span>
+            </button>
         </div>
-        <button id="basla-btn" onclick="oyunuBaslat()">BAŞLA</button>
+
+        <div style="display: flex; gap: 15px; margin-bottom: 30px;">
+            <button id="mode-bot" class="secili" onclick="modSec('bot')" style="padding: 12px 28px; font-size: 16px; cursor: pointer; font-weight: bold; border-radius: 6px; border: none; transition: 0.2s;">Bota Karşı</button>
+            <button id="mode-friend" onclick="modSec('friend')" style="padding: 12px 28px; font-size: 16px; cursor: pointer; font-weight: bold; border-radius: 6px; border: none; background: #7f8c8d; color: #d5dbdb;" disabled>Arkadaşına Karşı (Yakında)</button>
+        </div>
+        
+        <button onclick="oyunuBaslat()" style="padding: 16px 50px; font-size: 24px; cursor: pointer; background: #e67e22; color: white; border: none; border-radius: 8px; font-weight: bold; box-shadow: 0 6px #d35400; transition: 0.1s; text-shadow: 1px 1px #000;" onmousedown="this.style.transform='translateY(4px)'; this.style.boxShadow='0 2px #d35400'" onmouseup="this.style.transform='none'; this.style.boxShadow='0 6px #d35400'">SAVAŞI BAŞLAT! 🔥</button>
     </div>
 
-    <div id="mac-sonu-ekrani">MAÇ BİTTİ</div>
-    <div id="sure-sayaci">03:00</div>
-    <div id="can-yazilari-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40;"></div>
+    <div id="sure-sayaci" style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.7); color: #fff; padding: 6px 20px; font-size: 24px; font-weight: bold; border-radius: 20px; border: 2px solid #f1c40f; display: none; z-index: 10; letter-spacing: 1px;">03:00</div>
 
-    <div id="oyun-ui">
-        <div id="alt-panel">
-            <div id="iksir-bar">
-                <div id="iksir-metin">0 / 10</div>
-                <div id="iksir-doluluk"></div>
+    <div id="oyun-ui" style="position: absolute; bottom: 0; left: 0; width: 100%; display: none; z-index: 10; pointer-events: none;">
+        
+        <div style="width: 90%; max-width: 400px; margin: 0 auto 10px auto; background: rgba(0,0,0,0.6); padding: 4px; border-radius: 10px; border: 2px solid #34495e; position: relative; height: 24px; pointer-events: auto;">
+            <div id="iksir-doluluk" style="width: 0%; height: 100%; background: linear-index(90deg, #9b59b6, #8e44ad); border-radius: 8px; transition: width 0.1s linear;"></div>
+            <div id="iksir-metin" style="position: absolute; width: 100%; text-align: center; top: 4px; left: 0; color: white; font-weight: bold; font-size: 14px; text-shadow: 1px 1px #000;">0 / 10</div>
+        </div>
+
+        <div style="display: flex; justify-content: center; gap: 12px; background: rgba(44, 62, 80, 0.85); padding: 12px; border-top-left-radius: 16px; border-top-right-radius: 16px; pointer-events: auto; border-top: 3px solid #2c3e50;">
+            <div id="card-Sovalye" class="card" onclick="kartSec('Sovalye', 3)" style="width: 70px; height: 95px; background: white; border-radius: 6px; border: 2px solid #95a5a6; display: flex; flex-direction: column; align-items: center; justify-content: space-around; font-weight: bold; font-size: 11px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+                <span style="color:#2c3e50;">Şövalye</span>
+                <span style="font-size: 22px;">🛡️</span>
+                <span style="color: #2980b9;">💧 3</span>
             </div>
-            <div id="ui">
-                <div class="card" id="card-Sovalye" onclick="kartSec('Sovalye', 3)"><span>Şövalye</span><span>💧3</span></div>
-                <div class="card" id="card-Okcu" onclick="kartSec('Okcu', 2)"><span>Okçu</span><span>💧2</span></div>
-                <div class="card" id="card-Dev" onclick="kartSec('Dev', 5)"><span>Dev</span><span>💧5</span></div>
+            <div id="card-Okcu" class="card" onclick="kartSec('Okcu', 2)" style="width: 70px; height: 95px; background: white; border-radius: 6px; border: 2px solid #95a5a6; display: flex; flex-direction: column; align-items: center; justify-content: space-around; font-weight: bold; font-size: 11px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+                <span style="color:#2c3e50;">Okçu</span>
+                <span style="font-size: 22px;">🏹</span>
+                <span style="color: #2980b9;">💧 2</span>
+            </div>
+            <div id="card-Dev" class="card" onclick="kartSec('Dev', 5)" style="width: 70px; height: 95px; background: white; border-radius: 6px; border: 2px solid #95a5a6; display: flex; flex-direction: column; align-items: center; justify-content: space-around; font-weight: bold; font-size: 11px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;">
+                <span style="color:#2c3e50;">Dev</span>
+                <span style="font-size: 22px;">👹</span>
+                <span style="color: #2980b9;">💧 5</span>
             </div>
         </div>
     </div>
+
+    <div id="mac-sonu-ekrani" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 200; color: white; font-size: 36px; font-weight: bold; text-align: center; font-family: sans-serif;"></div>
 
     <script src="game.js"></script>
 </body>
