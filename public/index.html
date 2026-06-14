@@ -21,11 +21,39 @@
             height: 100vh;
         }
 
-        /* 👑 SEÇİLİ KART SINIFI (MENÜ VE OYUN İÇİ İÇİN) */
-        .secili {
-            background: #2ecc71 !important;
+        /* Mod butonları ve lobi tasarımları */
+        .mod-btn {
+            background: #34495e;
+            color: #bdc3c7;
+            border: 2px solid #2c3e50;
+            padding: 10px 15px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: left;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .mod-btn.active {
+            background: #2980b9 !important;
             color: white !important;
-            border: 2px solid #27ae60 !important;
+            border: 2px solid #3498db !important;
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+        }
+
+        .oda-input {
+            background: #2c3e50;
+            border: 2px solid #34495e;
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            width: 120px;
+            font-size: 13px;
+            outline: none;
         }
 
         .card.active {
@@ -39,42 +67,78 @@
 </head>
 <body>
 
-    <div id="menu-ekrani" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(44, 62, 80, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; color: white; text-align: center;">
-        <h1 style="margin-bottom: 5px; font-size: 42px; text-shadow: 3px 3px #000; letter-spacing: 2px;">HERO WARS ⚔️</h1>
-        <p style="color: #bdc3c7; margin-bottom: 25px; font-size: 16px;">Savaşçı Desteni Seç ve Arenaya Atıl!</p>
+    <div id="menu-ekrani" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(44, 62, 80, 0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; color: white; font-family: sans-serif;">
+        <h1 style="margin-bottom: 5px; font-size: 38px; text-shadow: 3px 3px #000; letter-spacing: 2px;">HERO WARS ⚔️</h1>
+        <p style="color: #bdc3c7; margin-bottom: 30px; font-size: 14px;">Deste Seçimini Yap, Modunu Belirle ve Savaş!</p>
         
-        <div style="display: flex; gap: 15px; margin-bottom: 30px; background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
-            <button id="menu-btn-Sovalye" class="menu-card-btn" onclick="menudeKartSec('Sovalye', 3)" style="width: 85px; height: 120px; border-radius: 8px; border: 3px solid #2ecc71; background: #e8f8f5; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: space-around; font-weight: bold; font-size: 12px; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
-                <span>Şövalye</span>
-                <span style="font-size:24px;">🛡️</span>
-                <span style="color:#2980b9;">💧 3</span>
-            </button>
-            <button id="menu-btn-Okcu" class="menu-card-btn" onclick="menudeKartSec('Okcu', 2)" style="width: 85px; height: 120px; border-radius: 8px; border: 2px solid #ccc; background: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: space-around; font-weight: bold; font-size: 12px; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
-                <span>Okçu</span>
-                <span style="font-size:24px;">🏹</span>
-                <span style="color:#2980b9;">💧 2</span>
-            </button>
-            <button id="menu-btn-Dev" class="menu-card-btn" onclick="menudeKartSec('Dev', 5)" style="width: 85px; height: 120px; border-radius: 8px; border: 2px solid #ccc; background: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: space-around; font-weight: bold; font-size: 12px; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
-                <span>Dev</span>
-                <span style="font-size:24px;">👹</span>
-                <span style="color:#2980b9;">💧 5</span>
-            </button>
+        <div style="display: flex; gap: 30px; background: rgba(0,0,0,0.3); padding: 25px; border-radius: 15px; box-shadow: inset 0 0 15px rgba(0,0,0,0.6); align-items: flex-start; max-width: 90%; flex-wrap: wrap; justify-content: center;">
+            
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <h3 style="margin-top: 0; color: #f1c40f; font-size: 16px; margin-bottom: 15px;">🃏 KARTINI SEÇ</h3>
+                <div style="display: flex; gap: 12px;">
+                    <button id="menu-btn-Sovalye" onclick="menudeKartSec('Sovalye', 3)" style="width: 80px; height: 110px; border-radius: 8px; border: 3px solid #2ecc71; background: #e8f8f5; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: space-around; font-weight: bold; font-size: 11px; transition: 0.2s;">
+                        <span>Şövalye</span>
+                        <span style="font-size:22px;">🛡️</span>
+                        <span style="color:#2980b9;">💧 3</span>
+                    </button>
+                    <button id="menu-btn-Okcu" onclick="menudeKartSec('Okcu', 2)" style="width: 80px; height: 110px; border-radius: 8px; border: 2px solid #ccc; background: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: space-around; font-weight: bold; font-size: 11px; transition: 0.2s;">
+                        <span>Okçu</span>
+                        <span style="font-size:22px;">🏹</span>
+                        <span style="color:#2980b9;">💧 2</span>
+                    </button>
+                    <button id="menu-btn-Dev" onclick="menudeKartSec('Dev', 5)" style="width: 80px; height: 110px; border-radius: 8px; border: 2px solid #ccc; background: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: space-around; font-weight: bold; font-size: 11px; transition: 0.2s;">
+                        <span>Dev</span>
+                        <span style="font-size:22px;">👹</span>
+                        <span style="color:#2980b9;">💧 5</span>
+                    </button>
+                </div>
+            </div>
+
+            <div style="width: 2px; background: rgba(255,255,255,0.1); height: 140px; align-self: center;" class="gizle-mobil"></div>
+
+            <div style="display: flex; flex-direction: column; width: 260px; gap: 10px;">
+                <h3 style="margin-top: 0; color: #f1c40f; font-size: 16px; margin-bottom: 5px; text-align: center;">🛡️ OYUN MODU SEÇ</h3>
+                
+                <button id="mod-online" class="mod-btn" onclick="oyunModuSec('online')">
+                    <span>🌐 Online Savaş</span>
+                </button>
+                
+                <button id="mod-bot" class="mod-btn active" onclick="oyunModuSec('bot')">
+                    <span>🤖 Bota Karşı Savaş</span>
+                </button>
+                
+                <button id="mod-friend" class="mod-btn" onclick="oyunModuSec('friend')">
+                    <span>👥 Arkadaşa Karşı Savaş</span>
+                </button>
+
+                <div id="oda-paneli" style="display: none; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; border: 1px solid #34495e; margin-top: 5px;">
+                    <div style="display:flex; justify-content: space-between; align-items:center;">
+                        <span style="font-size:12px; color:#e67e22; font-weight:bold;">Oda Kodu:</span>
+                        <input id="oda-kod-input" type="text" class="oda-input" placeholder="Örn: 1453">
+                    </div>
+                    <div style="display:flex; justify-content: space-between; align-items:center;">
+                        <span style="font-size:12px; color:#e67e22; font-weight:bold;">Şifre:</span>
+                        <input id="oda-sifre-input" type="password" class="oda-input" placeholder="Şifre">
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 5px;">
+                        <button onclick="odaEylemi('kur')" style="background:#27ae60; color:white; border:none; padding:6px; font-size:11px; font-weight:bold; border-radius:4px; cursor:pointer;">Oda Oluştur</button>
+                        <button onclick="odaEylemi('katil')" style="background:#2980b9; color:white; border:none; padding:6px; font-size:11px; font-weight:bold; border-radius:4px; cursor:pointer;">Odaya Katıl</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div style="display: flex; gap: 15px; margin-bottom: 30px;">
-            <button id="mode-bot" class="secili" onclick="modSec('bot')" style="padding: 12px 28px; font-size: 16px; cursor: pointer; font-weight: bold; border-radius: 6px; border: none; transition: 0.2s;">Bota Karşı</button>
-            <button id="mode-friend" onclick="modSec('friend')" style="padding: 12px 28px; font-size: 16px; cursor: pointer; font-weight: bold; border-radius: 6px; border: none; background: #7f8c8d; color: #d5dbdb;" disabled>Arkadaşına Karşı (Yakında)</button>
+        <div style="margin-top: 35px; display: flex; align-items: center; gap: 10px;">
+            <button onclick="oyunuBaslat()" style="padding: 12px 30px; font-size: 16px; cursor: pointer; background: #e67e22; color: white; border: none; border-radius: 6px; font-weight: bold; box-shadow: 0 4px #d35400; transition: 0.1s; text-shadow: 1px 1px #000;" onmousedown="this.style.transform='translateY(3px)'; this.style.boxShadow='0 1px #d35400'" onmouseup="this.style.transform='none'; this.style.boxShadow='0 4px #d35400'">Savaş! 🔥</button>
+            <span style="font-size: 24px; text-shadow: 1px 1px #000;">🛡️</span>
         </div>
-        
-        <button onclick="oyunuBaslat()" style="padding: 16px 50px; font-size: 24px; cursor: pointer; background: #e67e22; color: white; border: none; border-radius: 8px; font-weight: bold; box-shadow: 0 6px #d35400; transition: 0.1s; text-shadow: 1px 1px #000;" onmousedown="this.style.transform='translateY(4px)'; this.style.boxShadow='0 2px #d35400'" onmouseup="this.style.transform='none'; this.style.boxShadow='0 6px #d35400'">SAVAŞI BAŞLAT! 🔥</button>
     </div>
 
     <div id="sure-sayaci" style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.7); color: #fff; padding: 6px 20px; font-size: 24px; font-weight: bold; border-radius: 20px; border: 2px solid #f1c40f; display: none; z-index: 10; letter-spacing: 1px;">03:00</div>
 
     <div id="oyun-ui" style="position: absolute; bottom: 0; left: 0; width: 100%; display: none; z-index: 10; pointer-events: none;">
-        
         <div style="width: 90%; max-width: 400px; margin: 0 auto 10px auto; background: rgba(0,0,0,0.6); padding: 4px; border-radius: 10px; border: 2px solid #34495e; position: relative; height: 24px; pointer-events: auto;">
-            <div id="iksir-doluluk" style="width: 0%; height: 100%; background: linear-index(90deg, #9b59b6, #8e44ad); border-radius: 8px; transition: width 0.1s linear;"></div>
+            <div id="iksir-doluluk" style="width: 0%; height: 100%; background: linear-gradient(90deg, #9b59b6, #8e44ad); border-radius: 8px; transition: width 0.1s linear;"></div>
             <div id="iksir-metin" style="position: absolute; width: 100%; text-align: center; top: 4px; left: 0; color: white; font-weight: bold; font-size: 14px; text-shadow: 1px 1px #000;">0 / 10</div>
         </div>
 
@@ -97,7 +161,7 @@
         </div>
     </div>
 
-    <div id="mac-sonu-ekrani" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 200; color: white; font-size: 36px; font-weight: bold; text-align: center; font-family: sans-serif;"></div>
+    <div id="mac-sonu-ekrani" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 200; color: white; font-size: 36px; font-weight: bold; text-align: center;"></div>
 
     <script src="game.js"></script>
 </body>
