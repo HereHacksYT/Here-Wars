@@ -41,11 +41,57 @@ function macBitir(durum) {
     setTimeout(() => { location.reload(); }, 4000);
 }
 
+// --- DİNAMİK TEXTURE (DOKU) ÜRETİCİLERİ ---
+function createGrassTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#4caf50'; ctx.fillRect(0, 0, 512, 512);
+    // Çim detayları çizgileri
+    for (let i = 0; i < 8000; i++) {
+        ctx.fillStyle = Math.random() > 0.5 ? '#388e3c' : '#81c784';
+        ctx.fillRect(Math.random() * 512, Math.random() * 512, 2, 6);
+    }
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(4, 4);
+    return texture;
+}
+
+function createStoneTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#7f8c8d'; ctx.fillRect(0, 0, 256, 256);
+    // Taş tuğla çizgileri
+    ctx.strokeStyle = '#34495e'; ctx.lineWidth = 3;
+    for(let y=0; y<256; y+=32) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y); ctx.stroke();
+        let offset = (y % 64 === 0) ? 0 : 32;
+        for(let x=offset; x<=256; x+=64) {
+            ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y+32); ctx.stroke();
+        }
+    }
+    return new THREE.CanvasTexture(canvas);
+}
+
+function createWaterTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128; canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#2980b9'; ctx.fillRect(0, 0, 128, 128);
+    ctx.fillStyle = '#3498db';
+    for (let i = 0; i < 20; i++) {
+        ctx.fillRect(Math.random() * 128, Math.random() * 128, 40, 4);
+    }
+    return new THREE.CanvasTexture(canvas);
+}
+
 // --- THREE.JS KURULUMU ---
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x52b788);
+scene.background = new THREE.Color(0x388e3c);
 
-// 🎥 YENİ KAMERA AYARI: Yukarı kalkmadı (Y: 22 sabit), sadece geriye çekildi (Z: 26)
+// Fotoğraftaki tam açıyı yakalamak için kamera ayarı
 const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 22, 26); 
 camera.lookAt(0, -1, -3);
@@ -57,38 +103,51 @@ document.body.appendChild(renderer.domElement);
 const light = new THREE.DirectionalLight(0xffffff, 1.4);
 light.position.set(6, 35, 15);
 scene.add(light);
-scene.add(new THREE.AmbientLight(0x777777));
+scene.add(new THREE.AmbientLight(0x888888));
 
-// Nehir ve Köprüler (Bir tık daha genişletildi)
-const riverGeo = new THREE.BoxGeometry(24, 0.1, 3.0);
-const riverMat = new THREE.MeshLambertMaterial({ color: 0x22a6b3 });
-const river = new THREE.Mesh(riverGeo, riverMat);
-river.position.set(0, 0.05, 0);
-scene.add(river);
+// Dokuları hazırla
+const grassTex = createGrassTexture();
+const stoneTex = createStoneTexture();
+const waterTex = createWaterTexture();
 
-const kopruler = [{ x: -5.5, z: 0 }, { x: 5.5, z: 0 }];
-function kopruCiz(x) {
-    const geo = new THREE.BoxGeometry(3.0, 0.15, 3.8);
-    const mat = new THREE.MeshLambertMaterial({ color: 0x95a5a6 });
-    const msh = new THREE.Mesh(geo, mat);
-    msh.position.set(x, 0.1, 0);
-    scene.add(msh);
-}
-kopruCiz(-5.5); kopruCiz(5.5);
+// Fotoğraftaki gibi özel arenamız (Çim Zemin)
+const arenaGeo = new THREE.PlaneGeometry(30, 40);
+const arenaMat = new THREE.MeshLambertMaterial({ map: grassTex });
+const arena = new THREE.Mesh(arenaGeo, arenaMat);
+arena.rotation.x = -Math.PI / 2;
+arena.position.y = 0;
+scene.add(arena);
 
-// Zemin Tıklama Alanı
+// Görünmez tıklama zemini
 const groundGeo = new THREE.PlaneGeometry(70, 70);
 const groundMat = new THREE.MeshBasicMaterial({ visible: false });
 const ground = new THREE.Mesh(groundGeo, groundMat);
 ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
 
-// DİNAMİK BEYAZ SINIR GÖSTERGESİ (Haritaya göre ölçeklendi)
+// Nehir (Texture eklendi)
+const riverGeo = new THREE.BoxGeometry(24, 0.1, 3.0);
+const riverMat = new THREE.MeshLambertMaterial({ map: waterTex });
+const river = new THREE.Mesh(riverGeo, riverMat);
+river.position.set(0, 0.05, 0);
+scene.add(river);
+
+const kopruler = [{ x: -5.5, z: 0 }, { x: 5.5, z: 0 }];
+function kopruCiz(x) {
+    const geo = new THREE.BoxGeometry(3.0, 0.2, 3.8);
+    const mat = new THREE.MeshLambertMaterial({ map: stoneTex });
+    const msh = new THREE.Mesh(geo, mat);
+    msh.position.set(x, 0.12, 0);
+    scene.add(msh);
+}
+kopruCiz(-5.5); kopruCiz(5.5);
+
+// DİNAMİK BEYAZ SINIR GÖSTERGESİ
 const sinirGeo = new THREE.PlaneGeometry(20, 13.5); 
 const sinirMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
 const sinirIzgarasi = new THREE.Mesh(sinirGeo, sinirMat);
 sinirIzgarasi.rotation.x = -Math.PI / 2;
-sinirIzgarasi.position.set(0, 0.06, 7.5); 
+sinirIzgarasi.position.set(0, 0.07, 7.5); 
 sinirIzgarasi.visible = false; 
 scene.add(sinirIzgarasi);
 
@@ -109,7 +168,6 @@ function kuleKoruyucuEkle(renk, tip, kuleGrup, taraf) {
     const matDetay = new THREE.MeshLambertMaterial({ color: (taraf === 'oyuncu' ? OYUNCU_DETAY : BOT_DETAY) });
     const koruyucu = new THREE.Group();
 
-    // Üstteki okçu ve krallar daha da irileştirildi
     if (tip === 'okcu') {
         koruyucu.add(new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.7, 0.45), matAna));
         const kafa = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.4, 8), matDetay); kafa.position.y = 0.5; koruyucu.add(kafa);
@@ -128,26 +186,33 @@ function kuleKoruyucuEkle(renk, tip, kuleGrup, taraf) {
 
 function kuleOlustur(x, z, maxCan, taraf, tip) {
     const kuleGrup = new THREE.Group();
-    const renk = (taraf === 'oyuncu' ? OYUNCU_ANA : BOT_ANA);
     
-    // Kule gövdeleri daha geniş ve kalın yapıldı
+    // Kulelere Taş Deseni eklendi
     const geo = new THREE.CylinderGeometry(1.2, 1.55, 2.5, 8);
-    const mat = new THREE.MeshLambertMaterial({ color: renk });
+    const mat = new THREE.MeshLambertMaterial({ map: stoneTex });
     const govde = new THREE.Mesh(geo, mat);
     govde.position.y = 1.25;
     kuleGrup.add(govde);
 
-    const koruyucuTip = (tip === 'ana' ? 'kral' : 'okcu');
-    const koruyucuFigur = kuleKoruyucuEkle(renk, koruyucuTip, kuleGrup, taraf);
+    // Kulenin takım rengini belli eden üst halka bandı
+    const bantGeo = new THREE.CylinderGeometry(1.22, 1.25, 0.4, 8);
+    const bantMat = new THREE.MeshLambertMaterial({ color: (taraf === 'oyuncu' ? OYUNCU_ANA : BOT_ANA) });
+    const bant = new THREE.Mesh(bantGeo, bantMat);
+    bant.position.y = 2.2;
+    kuleGrup.add(bant);
 
-    const barArkaGeo = new THREE.BoxGeometry(2.6, 0.26, 0.1);
-    const barArka = new THREE.Mesh(barArkaGeo, new THREE.MeshBasicMaterial({ color: 0x000000 }));
+    const koruyucuTip = (tip === 'ana' ? 'kral' : 'okcu');
+    const koruyucuFigur = kuleKoruyucuEkle(taraf === 'oyuncu' ? OYUNCU_ANA : BOT_ANA, koruyucuTip, kuleGrup, taraf);
+
+    // 🟢 ARKALİ ÖNLÜ GÖRÜNEN CAN BARLARI (side: THREE.DoubleSide eklendi)
+    const barArkaGeo = new THREE.BoxGeometry(2.6, 0.26, 0.02);
+    const barArka = new THREE.Mesh(barArkaGeo, new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide }));
     barArka.position.set(0, 3.6, 0);
     kuleGrup.add(barArka);
 
-    const barCanGeo = new THREE.BoxGeometry(2.55, 0.18, 0.12);
-    const barCan = new THREE.Mesh(barCanGeo, new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
-    barCan.position.set(0, 3.6, 0.02);
+    const barCanGeo = new THREE.BoxGeometry(2.55, 0.18, 0.03);
+    const barCan = new THREE.Mesh(barCanGeo, new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide }));
+    barCan.position.set(0, 3.6, 0.01);
     kuleGrup.add(barCan);
 
     kuleGrup.position.set(x, 0, z);
@@ -159,13 +224,13 @@ function kuleOlustur(x, z, maxCan, taraf, tip) {
         koruyucu: koruyucuFigur, koruyucuTip: koruyucuTip, 
         kralUyanik: (tip === 'ana' ? false : true),
         hasar: (tip === 'ana' ? 35 : 22), 
-        menzil: (tip === 'ana' ? 8.5 : 10.0), // Yeni büyük haritaya uygun kule menzilleri
+        menzil: (tip === 'ana' ? 8.5 : 10.0),
         sonAtesZamani: 0
     };
     kuleler.push(kuleGrup);
 }
 
-// Koordinatlar yeni büyüklüklere göre dengelendi
+// Kule Yerleşimleri
 kuleOlustur(-5.5, 8.5, 800, 'oyuncu', 'sol');
 kuleOlustur(5.5, 8.5, 800, 'oyuncu', 'sag');
 kuleOlustur(0, 10.5, 1600, 'oyuncu', 'ana');
@@ -214,7 +279,7 @@ function sınırlarıGizle() {
 }
 
 function okFirlat(baslangicPos, healerNesne, hasar) {
-    const okGeo = new THREE.SphereGeometry(0.18, 4, 4); // Ok gözle görülür derecede büyütüldü
+    const okGeo = new THREE.SphereGeometry(0.18, 4, 4);
     const okMat = new THREE.MeshBasicMaterial({ color: 0xffcc00 });
     const okMesh = new THREE.Mesh(okGeo, okMat);
     okMesh.position.copy(baslangicPos);
@@ -223,12 +288,11 @@ function okFirlat(baslangicPos, healerNesne, hasar) {
     oklar.push({ mesh: okMesh, hedef: healerNesne, hasar: hasar, hiz: 0.38 });
 }
 
-// --- DAHA DA BÜYÜTÜLMÜŞ ASKER MOTORU ---
+// --- ASKER MOTORU VE ARKALARINDA ÇİFT TARAFLI CAN BARI ---
 function askerIndir(x, z, kartAdi, taraf) {
     const askerGrup = new THREE.Group();
     let geo, matAna, matDetay, hız, hasar, maxCan, menzil;
 
-    // Askerlerin boyutları gözle görülür şekilde irileştirildi
     if (kartAdi === 'Dev') {
         geo = new THREE.BoxGeometry(1.2, 2.0, 1.2);
         hız = 0.028; hasar = 28; maxCan = 320; menzil = 2.0;
@@ -263,11 +327,12 @@ function askerIndir(x, z, kartAdi, taraf) {
     askerGrup.add(bacakSol);
     askerGrup.add(bacakSag);
 
-    const bArka = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.12, 0.05), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+    // 🟢 ASKERLERİN ÇİFT TARAFLI CAN BARLARI (side: THREE.DoubleSide)
+    const bArka = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.12, 0.02), new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide }));
     bArka.position.set(0, 2.4, 0);
     askerGrup.add(bArka);
 
-    const bCan = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.07, 0.06), new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
+    const bCan = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.07, 0.03), new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide }));
     bCan.position.set(0, 2.4, 0.01);
     askerGrup.add(bCan);
 
@@ -283,7 +348,7 @@ function askerIndir(x, z, kartAdi, taraf) {
     askerler.push(askerGrup);
 }
 
-// BÜYÜYEN SINIRLARA GÖRE DOKUNMA/BIRAKMA MANTIĞI
+// Dokunma mantığı
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
@@ -335,6 +400,7 @@ function animate() {
     iksirDoldur();
     
     if (oyunBasladi) {
+        // Can barlarını kameraya döndürme (Billboard Etkisi) - Her yönden düzgün okunması için
         kuleler.forEach(k => {
             if (k.userData.canli) {
                 let oran = k.userData.can / k.userData.maxCan;
