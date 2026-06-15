@@ -6,7 +6,7 @@ let sureZamanlayici = null;
 let seciliKart = 'Sovalye';
 let seciliKartMaliyet = 3;
 
-// --- Gelişmiş Lobi ve Mod Seçimi ---
+// --- Gelişmiş Lobi ve Mod Seçimi (HERE WARS) ---
 function oyunModuSec(mod) {
     document.querySelectorAll('.mod-btn').forEach(b => b.classList.remove('active'));
     oyunModu = mod;
@@ -309,7 +309,7 @@ function kuleOlustur(x, z, maxCan, taraf, tip) {
         koruyucu: koruyucuFigur, koruyucuTip: koruyucuTip, 
         kralUyanik: (tip === 'ana' ? false : true),
         hasar: (tip === 'ana' ? 45 : 25), 
-        menzil: (tip === 'ana' ? 6.5 : 7.5), // Kule menzilleri dengelendi
+        menzil: (tip === 'ana' ? 6.5 : 7.5), 
         sonAtesZamani: 0
     };
     kuleler.push(kuleGrup);
@@ -376,12 +376,11 @@ function askerIndir(x, z, kartAdi, taraf) {
     const askerGrup = new THREE.Group();
     let geo, hız, hasar, maxCan, menzil;
 
-    // ⚔️ ADİL MENZİLLER: Yakın dövüşçüler dibine girmeden saldıramaz!
     if (kartAdi === 'Dev') {
         geo = new THREE.BoxGeometry(1.2, 2.0, 1.2); hız = 0.032; hasar = 35; maxCan = 380; menzil = 1.3;
     } else if (kartAdi === 'Okcu') {
         geo = new THREE.CylinderGeometry(0.4, 0.4, 1.3, 8); hız = 0.06; hasar = 16; maxCan = 85; menzil = 4.5;
-    } else { // Şövalye
+    } else { 
         geo = new THREE.BoxGeometry(0.85, 1.3, 0.85); hız = 0.055; hasar = 24; maxCan = 160; menzil = 1.1;
     }
 
@@ -534,12 +533,10 @@ function animate() {
             }
         });
 
-        // 🧠 GELİŞMİŞ YAPAY ZEKA VE HAREKET MANTIĞI
         askerler.forEach(asker => {
             if (!asker.userData.canli) return;
             let targetHedef = null; let enYakinMesafe = 999;
 
-            // Devler sadece kulelere odaklanır
             if (asker.userData.tip === 'Dev') {
                 kuleler.forEach(kule => {
                     if (kule.userData.canli && kule.userData.taraf !== asker.userData.taraf) {
@@ -548,11 +545,9 @@ function animate() {
                     }
                 });
             } else {
-                // Şövalye ve Okçular yakındaki düşman askerleri arar (Menzili içinde mi kontrolü)
                 askerler.forEach(rakip => {
                     if (rakip.userData.canli && rakip.userData.taraf !== asker.userData.taraf) {
                         let d = asker.position.distanceTo(rakip.position);
-                        // Sadece nehrin kendi tarafındaysa ya da köprüyü geçmişse yakın mesafedekilere kilitlenir
                         if (d < enYakinMesafe && d <= (asker.userData.menzil + 2.5)) { 
                             enYakinMesafe = d; 
                             targetHedef = rakip; 
@@ -560,7 +555,6 @@ function animate() {
                     }
                 });
                 
-                // Yakında asker yoksa kulelere yürür
                 if (!targetHedef) {
                     kuleler.forEach(kule => {
                         if (kule.userData.canli && kule.userData.taraf !== asker.userData.taraf) {
@@ -574,7 +568,6 @@ function animate() {
                 }
             }
 
-            // Eğer vuracak menzilde bir hedef varsa dur ve saldır
             if (targetHedef && enYakinMesafe <= asker.userData.menzil) {
                 asker.userData.bSol.rotation.x = 0; asker.userData.bSag.rotation.x = 0;
                 let tPos = new THREE.Vector3(targetHedef.position.x, asker.position.y, targetHedef.position.z);
@@ -585,7 +578,7 @@ function animate() {
                     if (simdi - asker.userData.sonAtesZamani > 1200) {
                         okFirlat(asker.position, targetHedef, asker.userData.hasar); asker.userData.sonAtesZamani = simdi;
                     }
-                } else { // Yakın dövüş hasarı
+                } else { 
                     targetHedef.userData.can -= asker.userData.hasar / 45;
                     if(targetHedef.userData.maxCan < 500 && targetHedef.userData.barCan) {
                         targetHedef.userData.barCan.scale.x = Math.max(0.001, targetHedef.userData.can / targetHedef.userData.maxCan);
@@ -596,19 +589,16 @@ function animate() {
                         else { scene.remove(targetHedef); }
                     }
                 }
-                return; // Saldırırken yürüme durur
+                return; 
             }
 
-            // Menzilde düşman yoksa, hedefe veya en yakın köprüye doğru YÜRÜMEYE DEVAM ET!
             asker.userData.adim += 0.22;
             let sallanti = Math.sin(asker.userData.adim) * 0.5;
             asker.userData.bSol.rotation.x = sallanti; asker.userData.bSag.rotation.x = -sallanti;
 
-            // Genel hedef: Eğer etrafta hiç kilitlenecek bir şey yoksa karşı ana kuleye doğru yürüt
             let hX = 0; 
             let hZ = (asker.userData.taraf === 'oyuncu') ? -10.5 : 10.5;
 
-            // Ama eğer karşı sahaya henüz geçmediyse, önce köprü hedefine yürümek zorunda!
             if (!asker.userData.gecitKopru) {
                 if ((asker.userData.taraf === 'oyuncu' && asker.position.z > 0) || (asker.userData.taraf === 'bot' && asker.position.z < 0)) {
                     hX = asker.userData.kopruHedef.x; 
@@ -616,7 +606,6 @@ function animate() {
                     if (Math.abs(asker.position.z - hZ) < 0.6) asker.userData.gecitKopru = true;
                 }
             } else {
-                // Köprüyü geçtiyse artık en yakın kule hangisiyse haritada oraya yönelir
                 let enYakinKule = null; let minKuleDist = 999;
                 kuleler.forEach(k => {
                     if (k.userData.canli && k.userData.taraf !== asker.userData.taraf) {
