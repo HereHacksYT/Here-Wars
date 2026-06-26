@@ -81,16 +81,16 @@ function macBitir(durum) {
     setTimeout(() => { location.reload(); }, 4000);
 }
 
-// --- Texture Yükleme (SENİN LİNKLERİNLE) ---
+// --- Texture Yükleme (YENİ LİNKLER) ---
 const textureLoader = new THREE.TextureLoader();
 
 function createGrassTexture() {
-    // Verdiğin çimen linki
-    return textureLoader.load('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtnvjhReVAcXF7mjUstIc9ZvIgXZmFdhPLzMWIQIK-dA&s=10');
+    // Verdiğin yeni çimen linki
+    return textureLoader.load('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQwXp_Y4_o9Zq4Ui5C2C_3RMYOL21-Pef5ZJcwrcKc9Fg&s=10');
 }
 
 function createStoneTexture() {
-    // Aynı taş texture'u kalsın (canvas ile)
+    // Taş texture (canvas ile)
     const canvas = document.createElement('canvas');
     canvas.width = 256; canvas.height = 256;
     const ctx = canvas.getContext('2d');
@@ -112,12 +112,12 @@ function createStoneTexture() {
 }
 
 function createWaterTexture() {
-    // Verdiğin su linki
-    return textureLoader.load('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQyiLgy9AjUf6q0OAAITeXqEPkYYKTRDcvFnnF-CTtWeQ&s=10');
+    // Verdiğin yeni su linki
+    return textureLoader.load('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQKDDjYtkS8F68p3H6MC4ebIfSYpmTCXy6OOOF30xJAWg&s=10');
 }
 
 function createAskerTexture(anaRenk, tip) {
-    // Eskisi gibi canvas ile renkli doku – istersen değiştirebilirsin
+    // Canvas ile renkli doku (3D model için)
     const canvas = document.createElement('canvas');
     canvas.width = 128; canvas.height = 128;
     const ctx = canvas.getContext('2d');
