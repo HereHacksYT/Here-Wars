@@ -85,12 +85,10 @@ function macBitir(durum) {
 const textureLoader = new THREE.TextureLoader();
 
 function createGrassTexture() {
-    // Verdiğin yeni çimen linki
     return textureLoader.load('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQwXp_Y4_o9Zq4Ui5C2C_3RMYOL21-Pef5ZJcwrcKc9Fg&s=10');
 }
 
 function createStoneTexture() {
-    // Taş texture (canvas ile)
     const canvas = document.createElement('canvas');
     canvas.width = 256; canvas.height = 256;
     const ctx = canvas.getContext('2d');
@@ -112,12 +110,10 @@ function createStoneTexture() {
 }
 
 function createWaterTexture() {
-    // Verdiğin yeni su linki
     return textureLoader.load('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQKDDjYtkS8F68p3H6MC4ebIfSYpmTCXy6OOOF30xJAWg&s=10');
 }
 
 function createAskerTexture(anaRenk, tip) {
-    // Canvas ile renkli doku (3D model için)
     const canvas = document.createElement('canvas');
     canvas.width = 128; canvas.height = 128;
     const ctx = canvas.getContext('2d');
@@ -150,12 +146,32 @@ camera.lookAt(0, -1, -3);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.bias = 0.0001;
 document.body.appendChild(renderer.domElement);
 
-const light = new THREE.DirectionalLight(0xffffff, 1.4);
+// IŞIKLANDIRMA (Gölgeli)
+const light = new THREE.DirectionalLight(0xffffff, 0.9);
 light.position.set(6, 35, 15);
+light.castShadow = true;
+light.shadow.mapSize.width = 2048;
+light.shadow.mapSize.height = 2048;
+light.shadow.camera.near = 0.5;
+light.shadow.camera.far = 50;
+light.shadow.camera.left = -20;
+light.shadow.camera.right = 20;
+light.shadow.camera.top = 20;
+light.shadow.camera.bottom = -20;
 scene.add(light);
-scene.add(new THREE.AmbientLight(0x999999));
+
+const ambientLight = new THREE.AmbientLight(0x404060);
+scene.add(ambientLight);
+
+// Zemin Işığı (altyapı)
+const fillLight = new THREE.DirectionalLight(0x88aaff, 0.3);
+fillLight.position.set(-10, 10, -10);
+scene.add(fillLight);
 
 const grassTex = createGrassTexture();
 const stoneTex = createStoneTexture();
@@ -166,6 +182,7 @@ const arenaGeo = new THREE.PlaneGeometry(30, 40);
 const arenaMat = new THREE.MeshLambertMaterial({ map: grassTex });
 const arena = new THREE.Mesh(arenaGeo, arenaMat);
 arena.rotation.x = -Math.PI / 2;
+arena.receiveShadow = true;
 scene.add(arena);
 
 // Görünmez zemin (tıklama için)
@@ -181,6 +198,7 @@ const riverGeo = new THREE.BoxGeometry(24, 0.1, 3.0);
 const riverMat = new THREE.MeshLambertMaterial({ map: waterTex });
 const river = new THREE.Mesh(riverGeo, riverMat);
 river.position.set(0, 0.05, 0);
+river.receiveShadow = true;
 scene.add(river);
 
 // Köprüler
@@ -190,6 +208,8 @@ function kopruCiz(x) {
     const mat = new THREE.MeshLambertMaterial({ map: stoneTex });
     const msh = new THREE.Mesh(geo, mat);
     msh.position.set(x, 0.12, 0);
+    msh.castShadow = true;
+    msh.receiveShadow = true;
     scene.add(msh);
 }
 kopruCiz(-5.5); kopruCiz(5.5);
@@ -206,7 +226,7 @@ suDuvariOlustur(-9.5, 5.0);
 suDuvariOlustur(0, 8.0);
 suDuvariOlustur(9.5, 5.0);
 
-// Sınır Izgarası (tek bir obje)
+// Sınır Izgarası
 let sinirGeo = new THREE.PlaneGeometry(20, 13.5);
 const sinirMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 });
 let sinirIzgarasi = new THREE.Mesh(sinirGeo, sinirMat);
@@ -222,6 +242,7 @@ function tribünVeTaraftarEkle(xYonu) {
     const tribünMat = new THREE.MeshLambertMaterial({ color: 0x7f8c8d });
     const tribün = new THREE.Mesh(tribünGeo, tribünMat);
     tribün.position.set(xYonu * 11.2, 0.75, 0);
+    tribün.receiveShadow = true;
     scene.add(tribün);
 
     const renkler = [0xe74c3c, 0x3498db, 0xf1c40f, 0x9b59b6, 0xffffff];
@@ -230,9 +251,12 @@ function tribünVeTaraftarEkle(xYonu) {
         const tMat = new THREE.MeshLambertMaterial({ color: renkler[Math.floor(Math.random() * renkler.length)] });
         const gövde = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.8, 0.55), tMat);
         gövde.position.y = 0.4;
+        gövde.castShadow = true;
+        gövde.receiveShadow = true;
         tGrup.add(gövde);
         const kafa = new THREE.Mesh(new THREE.SphereGeometry(0.2, 6, 6), new THREE.MeshLambertMaterial({ color: 0xffdbac }));
         kafa.position.y = 0.9;
+        kafa.castShadow = true;
         tGrup.add(kafa);
         tGrup.position.set(xYonu * 11.2, 1.5, z);
         scene.add(tGrup);
@@ -260,21 +284,29 @@ function kuleKoruyucuEkle(renkStr, tip, kuleGrup, taraf) {
     const koruyucu = new THREE.Group();
 
     if (tip === 'okcu') {
-        koruyucu.add(new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.7, 0.45), matAna));
+        const govde = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.7, 0.45), matAna);
+        govde.castShadow = true;
+        koruyucu.add(govde);
         const kafa = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.4, 8), matDetay);
         kafa.position.y = 0.5;
+        kafa.castShadow = true;
         koruyucu.add(kafa);
         const yay = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.04, 4, 8, Math.PI), new THREE.MeshLambertMaterial({color: 0xffb142}));
         yay.position.set(0.35, 0.25, -0.05);
         yay.rotation.y = Math.PI/2;
+        yay.castShadow = true;
         koruyucu.add(yay);
     } else {
-        koruyucu.add(new THREE.Mesh(new THREE.BoxGeometry(0.85, 1.0, 0.75), matAna));
+        const govde = new THREE.Mesh(new THREE.BoxGeometry(0.85, 1.0, 0.75), matAna);
+        govde.castShadow = true;
+        koruyucu.add(govde);
         const kafa = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), matDetay);
         kafa.position.y = 0.8;
+        kafa.castShadow = true;
         koruyucu.add(kafa);
         const tac = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.32, 0.25, 8, 1, true), new THREE.MeshBasicMaterial({color: 0xffcc00}));
         tac.position.y = 1.2;
+        tac.castShadow = true;
         koruyucu.add(tac);
     }
 
@@ -288,11 +320,15 @@ function kuleOlustur(x, z, maxCan, taraf, tip) {
     const kuleGrup = new THREE.Group();
     const govde = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.55, 2.5, 8), new THREE.MeshLambertMaterial({ map: stoneTex }));
     govde.position.y = 1.25;
+    govde.castShadow = true;
+    govde.receiveShadow = true;
     kuleGrup.add(govde);
 
     const bantMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(taraf === 'oyuncu' ? OYUNCU_ANA : BOT_ANA) });
     const bant = new THREE.Mesh(new THREE.CylinderGeometry(1.22, 1.25, 0.4, 8), bantMat);
     bant.position.y = 2.2;
+    bant.castShadow = true;
+    bant.receiveShadow = true;
     kuleGrup.add(bant);
 
     const koruyucuTip = (tip === 'ana' ? 'kral' : 'okcu');
@@ -350,7 +386,6 @@ function kartSec(kartAdi, maliyet) {
         seciliKartMaliyet = maliyet;
         document.getElementById('card-' + kartAdi).classList.add('active');
 
-        // Sınır çizgisini güncelle (yeniden oluşturma, sadece konum ve boyut)
         scene.remove(sinirIzgarasi);
         if (botSolKuleYikildi && botSagKuleYikildi) {
             sinirGeo = new THREE.PlaneGeometry(20, 25);
@@ -377,6 +412,7 @@ function okFirlat(baslangicPos, healerNesne, hasar) {
     const okMesh = new THREE.Mesh(okGeo, new THREE.MeshBasicMaterial({ color: 0xffcc00 }));
     okMesh.position.copy(baslangicPos);
     okMesh.position.y += 1.4;
+    okMesh.castShadow = true;
     scene.add(okMesh);
     oklar.push({ mesh: okMesh, hedon: healerNesne, hasar: hasar, hiz: 0.42 });
 }
@@ -402,14 +438,20 @@ function askerIndir(x, z, kartAdi, taraf) {
 
     const govde = new THREE.Mesh(geo, matDoku);
     govde.position.y = 0.85;
+    govde.castShadow = true;
+    govde.receiveShadow = true;
     askerGrup.add(govde);
 
     const kafaMesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), matDetay);
     kafaMesh.position.y = (kartAdi === 'Dev' ? 2.0 : 1.6);
+    kafaMesh.castShadow = true;
+    kafaMesh.receiveShadow = true;
     askerGrup.add(kafaMesh);
 
     const bacakSol = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.6, 0.2), matDetay);
     bacakSol.position.set(-0.25, 0.3, 0);
+    bacakSol.castShadow = true;
+    bacakSol.receiveShadow = true;
     const bacakSag = bacakSol.clone();
     bacakSag.position.x = 0.25;
     askerGrup.add(bacakSol);
@@ -485,13 +527,11 @@ function animate() {
     requestAnimationFrame(animate);
     iksirDoldur();
 
-    // Taraftar zıplaması
     taraftarlar.forEach(t => {
         t.mesh.position.y = 1.5 + Math.abs(Math.sin(Date.now() * 0.004 * t.hiz + t.offset)) * 0.4;
     });
 
     if (oyunBasladi) {
-        // Kule can çubuklarını güncelle
         kuleler.forEach(k => {
             if (k.userData.canli && k.userData.uiGrup) {
                 let oran = k.userData.can / k.userData.maxCan;
@@ -500,7 +540,6 @@ function animate() {
             }
         });
 
-        // Ölü askerleri temizle
         for (let i = askerler.length - 1; i >= 0; i--) {
             if (!askerler[i].userData.canli) {
                 scene.remove(askerler[i]);
@@ -508,14 +547,12 @@ function animate() {
             }
         }
 
-        // Asker can çubukları
         askerler.forEach(asker => {
             if (asker.userData.canli && asker.userData.uiGrup) {
                 asker.userData.uiGrup.lookAt(camera.position);
             }
         });
 
-        // Okları güncelle
         for (let i = oklar.length - 1; i >= 0; i--) {
             let ok = oklar[i];
             if (!ok.hedon.userData.canli) {
@@ -553,7 +590,6 @@ function animate() {
             }
         }
 
-        // Kulelerin saldırısı
         kuleler.forEach(kule => {
             if (!kule.userData.canli) return;
             let targetAsker = null;
@@ -576,7 +612,6 @@ function animate() {
             }
         });
 
-        // Askerlerin hareket ve saldırısı
         askerler.forEach(asker => {
             if (!asker.userData.canli) return;
             let targetHedef = null;
@@ -644,7 +679,6 @@ function animate() {
                 return;
             }
 
-            // Yürüme animasyonu
             asker.userData.adim += 0.22;
             let sallanti = Math.sin(asker.userData.adim) * 0.5;
             asker.userData.bSol.rotation.x = sallanti;
